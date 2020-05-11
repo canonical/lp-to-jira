@@ -34,7 +34,7 @@ def main():
     #TODO: implement with customize Launchpad login/password to allow this work with private bugs
 
     #TODO: catch exception if the Launchpad API isn't open
-    lp = launchpad = Launchpad.login_anonymously('anonymous', 'production', version='devel')
+    lp = Launchpad.login_anonymously('anonymous', 'production', version='devel')
 
     # 2. Make sure the bug ID exist
 
@@ -82,7 +82,7 @@ def main():
     if existing_issue:
         print("Launchpad Issue {} is already logged in JIRA here {}/browse/{}".format(bug_number,jira_server,existing_issue[0].key))
         return 1
-    
+
     # 5. import the bug and return the JIRA ID for said bug
     new_issue = jira.create_issue(  project=project_id, 
                                     summary='LP#{} - {}'.format(bug.id,bug.title),
