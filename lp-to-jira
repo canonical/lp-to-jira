@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+# The purpose of lp-to-JIRA is to take a launchad bug ID and create a new Entry in JIRA
+
+
+import sys
+import os
+import json
+
+from launchpadlib.launchpad import Launchpad
+from jira import JIRA
+
+# Ex:
+#     lp-to-JIRA bug_id
+#     lp-to-JIRA 32165487 CI20
+
+
+def usage():
+    print("usage    lp-to-jira bug-id project-id")
+    print("for ex:  lp-to-jira 3215487 CI20")
+
+def main():
+    # Make sure there's 2 arguments
+    if len(sys.argv) != 3:
+        usage()
+        sys.exit(1)
+
+    bug_number = sys.argv[1]
+    project_id = sys.argv[2]
+    jira_token_file = "{}/.jira.token".format(os.path.expanduser('~'))
+
+
+    # 1. Connect to Launchpad API
+    #     anonymouse login should be enough for now
+    #TODO: implement with customize login/password to allow this work with private bugs
+
+    #TODO: catch exception if the Launchpad API isn't open
+    lp = launchpad = Launchpad.login_anonymously('anonymous', 'production', version='devel')
+
+    # 2. Make sure the bug ID exist
+
+    #TODO: catch exception if the bug can't be found
+    bug = lp.bugs[bug_number]
+
+    # 3. Connect to the JIRA API
+    #     If no token Found, explain how to get a token
+    #TODO: On first launch, ask user for server, login and token and store them into $HOME/.jira.token
+    try:
+        with open(jira_token_file) as f:
+            config = json.load(f)
+            jira_server = config['jira-server']
+            jira_login = config['jira-login']
+            jira_token = config['jira-token']
+    except (FileNotFoundError, json.JSONDecodeError):
+        print('JIRA Token information file {} could not be found or parsed.'.format(jira_token_file))
+        print('')
+        gather_token = input('Do you want to entre your JIRA token information now? (Y/n) ')
+        if gather_token == 'n':
+            return 1
+        jira_server = input('Please enter your jira server address : ')
+        jira_login = input('Please enter your email login for JIRA : ')
+        jira_token = input('Please enter your JIRA API Token (see https://id.atlassian.com/manage-profile/security/api-tokens) : ')
+        save_token = input('Do you want to save those credentials for future use or lp-to-jira? (Y/n) ')
+        if save_token != 'n':
+            try:
+                data = {}
+                data['jira-server'] = jira_server
+                data['jira-login'] = jira_login
+                data['jira-token'] = jira_token
+                with open(jira_token_file,'w+') as f:
+                    json.dump(data,(f))
+            except (FileNotFoundError, json.JSONDecodeError):
+                # TODO: Probably better error handling can be done here
+                print("Something went wrong saving credentials")
+                return 1
+
+    #TODO catch execption when it dosn't connect
+    jira = JIRA(jira_server,basic_auth=(jira_login,jira_token))
+
+    # 4. Make sure that there's no bug in JIRA with the same ID than the Bug you're trying to import
+    #TODO Find a way to differentiate imported bug with other bugs (title?)
+
+    # 5. import the bug and return the JIRA ID for said bug
+    new_issue = jira.create_issue(  project=project_id, 
+                                    summary=bug.title,
+                                    description=bug.description, 
+                                    issuetype={'name': 'Bug'})
+
+    # TODO add the bug url to the JIRA entry
+
+    print("Created " + str(new_issue.permalink))
+
+main()
