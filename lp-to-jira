@@ -16,7 +16,7 @@ from jira import JIRA
 
 def usage():
     print("usage    lp-to-jira bug-id project-id")
-    print("for ex:  lp-to-jira 3215487 CI20")
+    print("for ex:  lp-to-jira 3215487 PR007")
 
 def main():
     # Make sure there's 2 arguments
@@ -31,7 +31,7 @@ def main():
 
     # 1. Connect to Launchpad API
     #     anonymouse login should be enough for now
-    #TODO: implement with customize login/password to allow this work with private bugs
+    #TODO: implement with customize Launchpad login/password to allow this work with private bugs
 
     #TODO: catch exception if the Launchpad API isn't open
     lp = launchpad = Launchpad.login_anonymously('anonymous', 'production', version='devel')
@@ -73,20 +73,27 @@ def main():
                 print("Something went wrong saving credentials")
                 return 1
 
-    #TODO catch execption when it dosn't connect
+    #TODO catch exception when it dosn't connect
     jira = JIRA(jira_server,basic_auth=(jira_login,jira_token))
 
     # 4. Make sure that there's no bug in JIRA with the same ID than the Bug you're trying to import
-    #TODO Find a way to differentiate imported bug with other bugs (title?)
+    existing_issue = jira.search_issues("project = \"{}\" AND summary ~ \"LP#{}\"".format(project_id,bug.id))
 
+    if existing_issue:
+        print("Launchpad Issue {} is already logged in JIRA here {}/browse/{}".format(bug_number,jira_server,existing_issue[0].key))
+        return 1
+    
     # 5. import the bug and return the JIRA ID for said bug
     new_issue = jira.create_issue(  project=project_id, 
-                                    summary=bug.title,
+                                    summary='LP#{} - {}'.format(bug.id,bug.title),
                                     description=bug.description, 
                                     issuetype={'name': 'Bug'})
+    
+    # 6. Adding a link to the Launchpad bug into the JIRA entry
+    link = {'url':bug.web_link,'title':'Launchpad Link'}
+    jira.add_simple_link(new_issue,object=link)
 
-    # TODO add the bug url to the JIRA entry
+    print("Created {}/browse/{}".format(jira_server,new_issue.key))
 
-    print("Created " + str(new_issue.permalink))
 
 main()
