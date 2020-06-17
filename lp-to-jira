@@ -56,7 +56,7 @@ def main():
         gather_token = input('Do you want to entre your JIRA token information now? (Y/n) ')
         if gather_token == 'n':
             return 1
-        jira_server = input('Please enter your jira server address : ')
+        jira_server = input('Please enter your jira server address (https://imy-server.atlassian.net): ')
         jira_login = input('Please enter your email login for JIRA : ')
         jira_token = input('Please enter your JIRA API Token (see https://id.atlassian.com/manage-profile/security/api-tokens) : ')
         save_token = input('Do you want to save those credentials for future use or lp-to-jira? (Y/n) ')
