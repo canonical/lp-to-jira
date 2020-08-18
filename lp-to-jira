@@ -8,6 +8,7 @@ import json
 
 from launchpadlib.launchpad import Launchpad
 from jira import JIRA
+from jira_api import jira_api
 
 # Ex:
 #     lp-to-JIRA bug_id
@@ -24,6 +25,7 @@ def main():
         usage()
         sys.exit(1)
 
+    #TODO implement some better options parsing 
     bug_number = sys.argv[1]
     project_id = sys.argv[2]
     jira_token_file = "{}/.jira.token".format(os.path.expanduser('~'))
@@ -42,45 +44,14 @@ def main():
     bug = lp.bugs[bug_number]
 
     # 3. Connect to the JIRA API
-    #     If no token Found, explain how to get a token
-    #TODO: On first launch, ask user for server, login and token and store them into $HOME/.jira.token
-    try:
-        with open(jira_token_file) as f:
-            config = json.load(f)
-            jira_server = config['jira-server']
-            jira_login = config['jira-login']
-            jira_token = config['jira-token']
-    except (FileNotFoundError, json.JSONDecodeError):
-        print('JIRA Token information file {} could not be found or parsed.'.format(jira_token_file))
-        print('')
-        gather_token = input('Do you want to entre your JIRA token information now? (Y/n) ')
-        if gather_token == 'n':
-            return 1
-        jira_server = input('Please enter your jira server address (https://imy-server.atlassian.net): ')
-        jira_login = input('Please enter your email login for JIRA : ')
-        jira_token = input('Please enter your JIRA API Token (see https://id.atlassian.com/manage-profile/security/api-tokens) : ')
-        save_token = input('Do you want to save those credentials for future use or lp-to-jira? (Y/n) ')
-        if save_token != 'n':
-            try:
-                data = {}
-                data['jira-server'] = jira_server
-                data['jira-login'] = jira_login
-                data['jira-token'] = jira_token
-                with open(jira_token_file,'w+') as f:
-                    json.dump(data,(f))
-            except (FileNotFoundError, json.JSONDecodeError):
-                # TODO: Probably better error handling can be done here
-                print("Something went wrong saving credentials")
-                return 1
-
-    #TODO catch exception when it dosn't connect
-    jira = JIRA(jira_server,basic_auth=(jira_login,jira_token))
+    api = jira_api()
+    jira = JIRA(api.server,basic_auth=(api.login,api.token))
 
     # 4. Make sure that there's no bug in JIRA with the same ID than the Bug you're trying to import
     existing_issue = jira.search_issues("project = \"{}\" AND summary ~ \"LP#{}\"".format(project_id,bug.id))
 
     if existing_issue:
-        print("Launchpad Issue {} is already logged in JIRA here {}/browse/{}".format(bug_number,jira_server,existing_issue[0].key))
+        print("Launchpad Issue {} is already logged in JIRA here {}/browse/{}".format(bug_number,api.server,existing_issue[0].key))
         return 1
 
     # 5. import the bug and return the JIRA ID for said bug
@@ -93,7 +64,7 @@ def main():
     link = {'url':bug.web_link,'title':'Launchpad Link'}
     jira.add_simple_link(new_issue,object=link)
 
-    print("Created {}/browse/{}".format(jira_server,new_issue.key))
+    print("Created {}/browse/{}".format(api.server,new_issue.key))
 
 
 main()
