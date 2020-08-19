@@ -39,9 +39,20 @@ def main():
     lp = Launchpad.login_anonymously('anonymous', 'production', version='devel')
 
     # 2. Make sure the bug ID exist
+    bug = None
+    bug_pkg = None
+    try:
+        bug = lp.bugs[bug_number]
+    except:
+        print("Couldn't find the Launchpad bug {}".format(bug_number))
+        return 1
 
-    #TODO: catch exception if the bug can't be found
-    bug = lp.bugs[bug_number]
+    if len(bug.bug_tasks) == 1:
+        bug_pkg = bug.bug_tasks[0].bug_target_name.split()[0]
+    else:
+        for task in bug.bug_tasks:
+            if "(Ubuntu)" in task.bug_target_name:
+                bug_pkg = task.bug_target_name.split()[0]
 
     # 3. Connect to the JIRA API
     api = jira_api()
@@ -56,7 +67,7 @@ def main():
 
     # 5. import the bug and return the JIRA ID for said bug
     new_issue = jira.create_issue(  project=project_id, 
-                                    summary='LP#{} - {}'.format(bug.id,bug.title),
+                                    summary='LP#{} [{}] {}'.format(bug.id,bug_pkg,bug.title),
                                     description=bug.description, 
                                     issuetype={'name': 'Bug'})
     
