@@ -32,11 +32,9 @@ def main():
 
 
     # 1. Connect to Launchpad API
-    #     anonymouse login should be enough for now
-    #TODO: implement with customize Launchpad login/password to allow this work with private bugs
 
     #TODO: catch exception if the Launchpad API isn't open
-    lp = Launchpad.login_anonymously('anonymous', 'production', version='devel')
+    lp = Launchpad.login_with('foundations', 'production', version='devel')
 
     # 2. Make sure the bug ID exist
     bug = None
