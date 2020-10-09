@@ -73,6 +73,10 @@ def main():
     link = {'url':bug.web_link,'title':'Launchpad Link'}
     jira.add_simple_link(new_issue,object=link)
 
+    # 7. Add reference to the JIRA entry in the bugs on Launchpad
+    bug.tags += [new_issue.key.lower()]
+    bug.lp_save()
+
     print("Created {}/browse/{}".format(api.server,new_issue.key))
 
 
