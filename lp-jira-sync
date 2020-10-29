@@ -1,0 +1,152 @@
+#!/usr/bin/python3
+# The purpose of lp-to-jira is to take a launchad bug ID and
+# create a new Entry in JIRA in a given project
+
+
+import sys
+import os
+import json
+
+from launchpadlib.launchpad import Launchpad
+from jira import JIRA
+from jira_api import jira_api
+
+jira_server = "https://warthogs.atlassian.net/"
+jira_project = "FR"
+jira_lp_db = []
+
+jira = None
+api = None
+
+# If set to True, no change will be applied to JIRA or LP
+dry_run = True
+
+# Status for report
+green_cell = 'style="background-color:#00FF00"'
+red_cell = 'style="background-color:#FF0000"'
+
+
+def usage():
+    print("TBD")
+
+
+def update_html_report():
+    html_data = """\
+    <!DOCTYPE html>
+    <html><title>Launchpad JIRA sync status</title>
+    <head>
+    <style>
+    table, th, td {
+        border: 1px solid black;
+    }
+    </style>
+    </head>
+    <body>
+    <table>
+    <tr><th>LaunchPad</th><th>JIRA</th><th>Sync</th><th>Details</th></tr>"""
+
+    for entry in jira_lp_db:
+        style = green_cell
+        detail = ""
+        if entry[2]:
+            style = red_cell
+            detail = ' '.join(entry[2])
+        line = ("""\
+    <tr>
+        <td><a href={}/browse/{}>{}</a></td>
+        <td><a href=https://pad.lv/{}>LP#{}</a></td>
+        <td {}></td>
+        <td>{}</td>
+    </tr>""").format(jira_server, entry[0], entry[0],
+                     entry[1], entry[1],
+                     style, detail)
+        html_data += line + "\n"
+
+    html_data += "</table></body></html>"
+
+    html_file = open("lp-jira-sync.html", 'w')
+    html_file.write(html_data)
+
+
+def main():
+    jira_token_file = "{}/.jira.token".format(os.path.expanduser('~'))
+
+    # 1. Initialize JIRA API
+    print("Initialize JIRA API ...")
+    api = jira_api()
+    jira = JIRA(api.server, basic_auth=(api.login, api.token))
+
+    # TODO: catch exception if the Launchpad API isn't open
+    # 2. Initialize Launchpad API
+    print("Initialize Launchpad API ...")
+    lp = Launchpad.login_with('foundations', 'production', version='devel')
+
+    # 3. Create Joint Structure
+    # 3.a search for all JIRA issues that starts with LP#
+    print("Searching for JIRA issues ...", flush=True)
+    # Get JIRA issues in batch of 50
+    num_issues = 0
+    issue_index = 0
+    issue_batch = 50
+    
+    print("Comparing JIRA issues with LP Bugs : ", flush=True, end="")
+    while True:
+        start_index = issue_index * issue_batch
+        request = "project = {} AND type = Bug AND summary ~ \"LP#\"".format(
+            jira_project)
+        issues = jira.search_issues(request, startAt=start_index)
+        if not issues:
+            break
+        issue_index += 1
+        # For each issue in JIRA with LP# in the title
+        loading = ['\\', '|', '/', '-']
+        for issue in issues:
+            num_issues += 1
+            print("{}".format(
+                loading[num_issues % len(loading)]),
+                flush=True,
+                end="\b")
+            summary = issue.fields.summary
+            bug_id = summary[summary.find("LP#") + 3:summary.find(" ")]
+            errors = []
+            try:
+                lpbug = lp.bugs[int(bug_id)]
+                # bug_tag: the LP bug has a tag for the JIRA issue
+                if lpbug.title not in summary:
+                    errors.append("BAD_TITLE")
+                if issue.key.lower() not in lpbug.tags:
+                    errors.append("NO_TAG")
+
+            except Exception:
+                print("\nCouldn't find the Launchpad bug {}".format(bug_id))
+
+            jira_lp_db.append([issue.key, bug_id, errors])
+    print("")
+
+    # Making sure LP bugs have a tag reference toward the JIRA entry key
+    if not dry_run:
+        for issue in jira_lp_db:
+            if not issue[3]['bug_tag']:
+                try:
+                    lpbug = lp.bugs[int(issue[1])]
+                    print("Fixing tag for LP#{} : {} ".format(
+                        issue[1],
+                        lpbug.tags),
+                        flush=True)
+                    lpbug.tags += [issue[0].lower()]
+                    lpbug.lp_save()
+                except Exception:
+                    print("Cannot find Bug {}".format(issue[1]))
+
+
+# main()
+
+# # Save report
+# with open('lp-jira.json', 'w') as fp:
+#     json.dump(jira_lp_db, fp, indent=2)
+
+# Load report
+with open('lp-jira.json', 'r') as fp:
+    jira_lp_db = json.load(fp)
+
+update_html_report()

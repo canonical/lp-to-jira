@@ -10,7 +10,21 @@ a JIRA account is required You will need to setup a JIRA token to access your se
 On the first launch lp-to-jira will assist you in getting your jira API token.
 JIRA API token can be created here https://id.atlassian.com/manage-profile/security/api-tokens
 
-## Command Example:
+## Usage:
 ```
-# lp-to-jira 12323434 PRO
+usage: lp-to-jira [options] bug-id project-id
+
+Create JIRA entry for a given Launchpad bug ID
+
+options:
+    -e, --exists"
+                Look if the Launchpad Bug has alreaady been imported
+                print the JIRA issue ID if found
+    -l, --label LABEL
+                Add LABEL to the JIRA issue after creation
+
+Examples:
+    lp-to-jira 3215487 FR
+    lp-to-jira -e 3215487 FR
+    lp-to-jira -l ubuntu-meeting 3215487 PR
 ```
