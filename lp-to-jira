@@ -14,6 +14,24 @@ from jira import JIRA
 from jira_api import jira_api
 
 
+pkg_to_component = {
+    "nplan": "netplan",
+    "netplan.io": "netplan",
+    "netplan": "netplan",
+    "systemd": "systemd",
+    "s390-tools": "IBM",
+    "subiquity": "subiquity",
+    "curtin": "subiquity",
+    "ubuntu-image": "Ubuntu Image",
+    "shim-signed": "Secure Boot",
+    "openjdk-lts": "OpenJDK",
+    "apt": "Package Management",
+    "aptdaemon": "Package Management",
+    "ubuntu-release-upgrader": "Package Management"
+}
+default_component = "Distro"
+
+
 def main():
     usage = """\
 usage: lp-to-jira [options] bug-id project-id
@@ -116,6 +134,11 @@ Examples:
     if opts.label:
         issue_dict["labels"] = [opts.label]
 
+    jira_component = []
+    jira_component.append(
+        {"name":pkg_to_component.get(bug_pkg, default_component)})
+    issue_dict["components"] = jira_component
+
     # 5. import the bug and return the JIRA ID for said bug
     new_issue = jira.create_issue(fields=issue_dict)
 
@@ -124,8 +147,8 @@ Examples:
     jira.add_simple_link(new_issue, object=link)
 
     # 7. Add reference to the JIRA entry in the bugs on Launchpad
-    # bug.tags += [new_issue.key.lower()]
-    # bug.lp_save()
+    bug.tags += [new_issue.key.lower()]
+    bug.lp_save()
 
     print("Created {}/browse/{}".format(api.server, new_issue.key))
 
