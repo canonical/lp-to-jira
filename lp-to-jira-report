@@ -1,0 +1,363 @@
+#!/usr/bin/python3
+# The purpose of lp-to-jira is to take a launchad bug ID and
+# create a new Entry in JIRA in a given project
+
+
+import sys
+import os
+import json
+import datetime
+
+from launchpadlib.launchpad import Launchpad
+from jira import JIRA
+from jira_api import jira_api
+
+jira_server = "https://warthogs.atlassian.net/"
+jira_project = "FR"
+
+colummns = ["Jira ID",
+            "Summary",
+            "Status",
+            "LaunchPad ID",
+            "Heat",
+            "Package(s)",
+            "Devel",
+            "Groovy",
+            "Focal",
+            "Bionic",
+            "Xenial",
+            "Trusty"
+            ]
+
+jira_lp_db = []
+
+jira = None
+api = None
+
+# If set to True, no change will be applied to JIRA or LP
+dry_run = True
+
+# Status for report
+
+orange_cell = 'style="background-color:#FFcc66"'
+green_cell = 'style="background-color:#00cc66"'
+red_cell = 'style="background-color:#ce2c2c"'
+
+status_color = {
+    "New":'style="background-color:#af7850"',
+    "Confirmed":'style="background-color:#E94348"',
+    "Incomplete":'style="background-color:#E94348"',
+    "Triaged":'style="background-color:#F77200"',
+    "Fix Committed":'style="background-color:#b5d4a7"',
+    "Fix Released":'style="background-color:#6ab44b"'
+}
+
+def usage():
+    print("TBD")
+
+
+def java_script():
+    'How to sort a table https://www.w3schools.com/howto/howto_js_sort_table.asp'
+    'Addition of numeric boolean to allow sorting based on numbers'
+    script = """\
+    <script>
+    function sortTable(n,numerical) {
+        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        table = document.getElementById("JIRA-LP-TABLE");
+        switching = true;
+        // Set the sorting direction to ascending:
+        dir = "asc";
+        /* Make a loop that will continue until
+        no switching has been done: */
+        while (switching) {
+        // Start by saying: no switching is done:
+        switching = false;
+        rows = table.rows;
+        /* Loop through all table rows (except the
+        first, which contains table headers): */
+        for (i = 1; i < (rows.length - 1); i++) {
+            // Start by saying there should be no switching:
+            shouldSwitch = false;
+            /* Get the two elements you want to compare,
+            one from current row and one from the next: */
+            x = rows[i].getElementsByTagName("TD")[n];
+            y = rows[i + 1].getElementsByTagName("TD")[n];
+            /* Check if the two rows should switch place,
+            based on the direction, asc or desc: */
+            if (dir == "asc") {
+            if (numerical) {
+                //check if the two rows should switch place:
+                if (Number(x.innerHTML) < Number(y.innerHTML)) {
+                    //if so, mark as a switch and break the loop:
+                    shouldSwitch = true;
+                    break;
+                }
+            }
+            else if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                // If so, mark as a switch and break the loop:
+                shouldSwitch = true;
+                break;
+            }
+            } else if (dir == "desc") {
+            if (numerical) {
+                //check if the two rows should switch place:
+                if (Number(x.innerHTML) > Number(y.innerHTML)) {
+                    //if so, mark as a switch and break the loop:
+                    shouldSwitch = true;
+                    break;
+                }
+            }
+            else if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                // If so, mark as a switch and break the loop:
+                shouldSwitch = true;
+                break;
+            }
+            }
+        }
+        if (shouldSwitch) {
+            /* If a switch has been marked, make the switch
+            and mark that a switch has been done: */
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            // Each time a switch is done, increase this count by 1:
+            switchcount ++;
+        } else {
+            /* If no switching has been done AND the direction is "asc",
+            set the direction to "desc" and run the while loop again. */
+            if (switchcount == 0 && dir == "asc") {
+            dir = "desc";
+            switching = true;
+            }
+        }
+        }
+    }
+    </script>
+    """
+
+    return script
+
+
+# TODO: Need to make this more generic, cleaner better
+def update_html_report():
+    html_data = """\
+    <!DOCTYPE html>
+    <html><title>Foundations JIRA / Launchpad status</title>
+    <head>
+    <style>
+    table, th, td {
+        border: 1px solid black;
+    }
+    </style>
+    </head>
+    """
+    html_data += java_script()
+
+    html_data += "<body>"
+
+    html_data += "<p>Report generated on {}</p>".format(datetime.datetime.now())
+    html_data += '<table id="JIRA-LP-TABLE">\n'
+
+    title = True
+    for entry in jira_lp_db:
+        if title:
+            line = ("""\
+        <tr>
+            <th>{}</th>
+            <th>{}</th>
+            <th onclick="sortTable(2,false)">{} (sort)</th>
+            <th>{}</th>
+            <th onclick="sortTable(4,true)">{} (sort)</th>
+            <th>{}</th>
+            <th>{}</th>
+            <th>{}</th>
+            <th>{}</th>
+            <th>{}</th>
+            <th>{}</th>
+            <th>{}</th>
+        </tr>
+                """).format(entry[0],entry[1],entry[2],entry[3],entry[4],entry[5],entry[6],entry[7],entry[8],entry[9],entry[10],entry[11])
+            html_data += line
+            title = False
+        else:
+            line = ("""\
+        <tr>
+            <td><a href={}/browse/{}>{}</a></td>
+            <td>{}</td>
+            <td>{}</td>
+            <td><a href=https://pad.lv/{}>LP#{}</a></td>
+            <td>{}</td>
+            <td>{}</td>
+            <td {}>{}</td>
+            <td {}>{}</td>
+            <td {}>{}</td>
+            <td {}>{}</td>
+            <td {}>{}</td>
+            <td {}>{}</td>
+        </tr>""").format(jira_server, entry[0], entry[0],
+                        entry[1][:80]+" ..." if len(entry[1])>80 else entry[1],
+                        entry[2],
+                        entry[3], entry[3],
+                        entry[4],
+                        "multiple packages" if len(entry[5].split(","))>2 else entry[5],
+                        status_color.get(entry[6]),entry[6],
+                        status_color.get(entry[7]),entry[7],
+                        status_color.get(entry[8]),entry[8],
+                        status_color.get(entry[9]),entry[9],
+                        status_color.get(entry[10]),entry[10],
+                        status_color.get(entry[11]),entry[11])
+            html_data += line + "\n"
+
+    html_data += "</table>"
+    html_data += "</body></html>"
+
+    html_file = open("lp-jira-sync.html", 'w')
+    html_file.write(html_data)
+
+
+def print_table(table, sep = "|", draw_title = True, limit=60):
+    if not table:
+        return
+    #How many Columns
+    cols = len(table[0])
+    # Assume every line of the table are identical
+    cols_size = [len( max( [id[i] for id in table],key=len)) for i in range(cols)]
+
+    # limit size of some cloumns if needed
+    cols_size = [limit if x > limit else x for x in cols_size]
+
+    for line in table:
+        line_adj = ['{:{width}s}'.format(line[x][:limit],width=cols_size[x]) for x in range(cols)]
+
+        print(sep.join(line_adj))
+
+        # First line ?
+        if draw_title:
+            print("-" * len(sep.join(line_adj)))
+            draw_title = False
+
+
+def get_bug_id(summary):
+    "Extract the bug id from a jira title whivh would icnlude LP#"
+    id= ""
+
+    if "LP#" in summary:
+        for char in summary[summary.find("LP#")+3:]:
+            if char.isdigit():
+                id = id + char
+            else:
+                break
+
+    return id
+
+
+def main():
+    # 1. Initialize JIRA API
+    print("Initialize JIRA API ...")
+    api = jira_api()
+    jira = JIRA(api.server, basic_auth=(api.login, api.token))
+
+    # TODO: catch exception if the Launchpad API isn't open
+    # 2. Initialize Launchpad API
+    print("Initialize Launchpad API ...")
+    lp = Launchpad.login_with('foundations', 'production', version='devel')
+
+    # 3. Create Joint Structure
+    # 3.a search for all JIRA issues that starts with LP#
+    print("Searching for JIRA issues ...", flush=True)
+    # Get JIRA issues in batch of 50
+    num_issues = 0
+    issue_index = 0
+    issue_batch = 50
+
+    jira_lp_db.append(colummns)
+
+    while True:
+        start_index = issue_index * issue_batch
+        request = "project = {} " \
+                "AND summary ~ \"LP#\" " \
+                "AND status in (BLOCKED, Backlog, \"In Progress\", " \
+                "REVIEW,\"Selected for Development\")""".format(jira_project)
+        # issues = jira.search_issues(request, startAt=start_index)
+        issues = jira.search_issues(request, startAt=start_index) #, maxResults=3)
+
+        if not issues:
+            break
+        issue_index += 1
+        loading = ['\\', '|', '/', '-']
+        # For each issue in JIRA with LP# in the title
+        for issue in issues:
+            summary = issue.fields.summary
+            if "LP#" in summary:
+                num_issues += 1
+                print("{}".format(
+                    loading[num_issues % len(loading)]),
+                    flush=True,
+                    end="\b")
+
+                lpbug_id = get_bug_id(summary)
+                lpbug_devel = ""
+                lpbug_groovy = ""
+                lpbug_focal = ""
+                lpbug_bionic = ""
+                lpbug_xenial = ""
+                lpbug_trusty = ""
+
+                try:
+                    lpbug = lp.bugs[int(lpbug_id)]
+
+                    list_pkg = [ x.bug_target_name.split()[0] for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name]
+                    bug_pkg = ", ".join(list_pkg)
+                    if len(list_pkg) == 1:
+                        lpbug_devel = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name])
+                        lpbug_groovy = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Groovy)" in x.bug_target_name])
+                        lpbug_focal = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Focal)" in x.bug_target_name])
+                        lpbug_bionic = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Bionic)" in x.bug_target_name])
+                        lpbug_xenial = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Xenial)" in x.bug_target_name])
+                        lpbug_trusty = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Trusty)" in x.bug_target_name])
+
+                    jira_lp_db.append([issue.key,
+                        summary,
+                        issue.fields.status.name,
+                        lpbug_id,
+                        str(lpbug.heat),
+                        bug_pkg,
+                        lpbug_devel,
+                        lpbug_groovy,
+                        lpbug_focal,
+                        lpbug_bionic,
+                        lpbug_xenial,
+                        lpbug_trusty])
+
+                except Exception:
+                    print("\nCouldn't find the Launchpad bug {}".format(lpbug_id))
+                    jira_lp_db.append([issue.key,
+                        summary,
+                        issue.fields.status.name,
+                        lpbug_id,
+                        "N/A",
+                        "Error",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        ""])
+
+
+main()
+
+# Load report
+# with open('lp-jira.json', 'r') as fp:
+#     jira_lp_db = json.load(fp)
+
+print_table(jira_lp_db,sep=" | ")
+
+# Save report
+with open('lp-jira.json', 'w') as fp:
+    json.dump(jira_lp_db, fp, indent=2)
+
+update_html_report()
+
+
+
+#print("Found %s issues" % len(jira_lp_db))
