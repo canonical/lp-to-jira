@@ -8,12 +8,20 @@ import os
 import json
 import datetime
 
+from optparse import OptionParser
+
 from launchpadlib.launchpad import Launchpad
 from jira import JIRA
 from jira_api import jira_api
 
-jira_server = "https://warthogs.atlassian.net/"
-jira_project = "FR"
+
+jira_server = ""
+jira_project = ""
+
+jira_lp_db = []
+
+jira = None
+api = None
 
 series = ["Devel",
           "Groovy",
@@ -31,19 +39,10 @@ colummns = ["Jira ID",
             "Packages",
             ] + series
 
-jira_lp_db = []
-
-jira = None
-api = None
-
-# If set to True, no change will be applied to JIRA or LP
-dry_run = True
-
-# Status for report
 importance_color = {
     "Critical":'style="color:#d12b1f"',
     "High":'style="color:#e07714"',
-    "Medium":'style="color:#0a471f"',
+    "Medium":'style="color:#0b9b3d"',
     "Low":"",
     "Wishlist":'style="color:#2727a7"',
     "Undecided":'style="color:#6d6d6e"',
@@ -61,10 +60,6 @@ status_color = {
 
 def status_cell(status):
     return "<td %s>%s</td>" % (status_color.get(status,""), status)
-
-def usage():
-    print("TBD")
-
 
 def java_script():
     'How to sort a table https://www.w3schools.com/howto/howto_js_sort_table.asp'
@@ -147,8 +142,7 @@ def java_script():
     return script
 
 
-# TODO: Need to make this more generic, cleaner better
-def update_html_report():
+def print_html_report(file):
     html_data = """\
     <!DOCTYPE html>
     <html><title>Foundations JIRA / Launchpad status</title>
@@ -162,9 +156,9 @@ def update_html_report():
     """
     html_data += java_script()
 
-    html_data += "<body>"
+    html_data += "<body>\n"
 
-    html_data += "<p>Report generated on {}</p>".format(datetime.datetime.now())
+    html_data += "<p>Report generated on {}</p>\n".format(datetime.datetime.now())
     html_data += '<table id="JIRA-LP-TABLE">\n'
 
     title = True
@@ -181,52 +175,65 @@ def update_html_report():
             line += "</tr>\n"
             html_data += line
             title = False
-        else:
-            line = "<tr>"
-            line +="<td><a href=%s/browse/%s>%s</a></td>" % \
-                (jira_server, entry['JIRA ID'], entry['JIRA ID'])
-            line += "<td>%s</td>" % (entry['Summary'][:80]+" ..." if len(entry['Summary'])>80 else entry['Summary'])
-            line += "<td>%s</td>" % entry['Status']
 
-            line += "<td><a href=https://pad.lv/%s>LP#%s</a></td>" % \
-                (entry['LaunchPad ID'], entry['LaunchPad ID'])
-            line += "<td>%d</td>" % entry['Heat']
-            line += "<td %s><b>%s</b></td>" % (importance_color.get(entry['Importance']), entry['Importance'])
-            line += "<td>%s</td>" % ("multiple packages" if len(entry['Packages'].split(","))>2 else entry['Packages'])
+        line = "<tr>\n"
+        line +="\t<td><a href=%s/browse/%s>%s</a></td>\n" % \
+            (jira_server, entry['JIRA ID'], entry['JIRA ID'])
+        line += "\t<td>%s</td>\n" % (entry['Summary'][:80]+" ..." if len(entry['Summary'])>80 else entry['Summary'])
+        line += "\t<td>%s</td>\n" % entry['Status']
 
-            for serie in series:
-                line += status_cell(entry[serie])
+        line += "\t<td><a href=https://pad.lv/%s>LP#%s</a></td>\n" % \
+            (entry['LaunchPad ID'], entry['LaunchPad ID'])
+        line += "\t<td>%s</td>\n" % entry['Heat']
+        line += "\t<td %s><b>%s</b></td>\n" % (importance_color.get(entry['Importance']), entry['Importance'])
+        line += "\t<td>%s</td>\n" % ("multiple packages" if len(entry['Packages'].split(","))>2 else entry['Packages'])
 
-            line += "</tr>\n"
-            html_data += line + "\n"
+        for serie in series:
+            line += ("\t" + status_cell(entry[serie]) + "\n")
+
+        line += "</tr>\n"
+        html_data += line + "\n"
 
     html_data += "</table>"
     html_data += "</body></html>"
 
-    html_file = open("lp-jira-sync.html", 'w')
-    html_file.write(html_data)
+    with open(file, 'w') as html_file:
+        html_file.write(html_data)
 
 
-def print_table(table, sep = "|", draw_title = True, limit=60):
+def print_table(table, sep = "|", draw_title = True, limit=60, align=True, file="/dev/stdout"):
+    """
+    Print a 2D list on stdout assuming it is rectangular (matrix) shape (NxM)
+    TODO: handle non rectangular list
+    limit: allows to limit the maximum size per column (default 60)
+    draw_title: if the first line of your table is the header, this will print a line underneath
+    """
+
     if not table:
         return
+
     #How many Columns
     cols = len(table[0])
+
     # Assume every line of the table are identical
     cols_size = [len( max( [id[i] for id in table],key=len)) for i in range(cols)]
 
     # limit size of some cloumns if needed
     cols_size = [limit if x > limit else x for x in cols_size]
 
-    for line in table:
-        line_adj = ['{:{width}s}'.format(line[x][:limit],width=cols_size[x]) for x in range(cols)]
+    with open(file, 'w') as output_file:
+        for line in table:
+            if align:
+                line_adjust = ['{:{width}s}'.format(line[x][:limit],width=cols_size[x]) for x in range(cols)]
+            else:
+                line_adjust = line
 
-        print(sep.join(line_adj))
+            output_file.write(sep.join(line_adjust)+"\n")
 
-        # First line ?
-        if draw_title:
-            print("-" * len(sep.join(line_adj)))
-            draw_title = False
+            # First line ?
+            if draw_title:
+                output_file.write("-" * len(sep.join(line_adjust))+"\n")
+                draw_title = False
 
 
 def get_bug_id(summary):
@@ -244,9 +251,56 @@ def get_bug_id(summary):
 
 
 def main():
+    global jira_server
+
+    usage = """\
+usage: lp-to-jira-report [options] project-id
+
+Report the status of all active LaunchPad bug imported
+into a JIRA project with lp-to-jira
+
+options:
+    --csv FILE
+        export the results of the report into FILE in csv format
+    --html FILE
+        export the results of the report into FILE in html format
+    --json FILE
+        export the results of the report into FILE in json format
+    default:
+        display the report on stdout
+
+Examples:
+    lp-to-jira-report FR
+    lp-to-jira-report --csv  results.csv  FR
+    lp-to-jira-report --json results.json FR
+    lp-to-jira-report --html results.html FR
+    """
+    opt_parser = OptionParser(usage)
+    opt_parser.add_option(
+        '--csv',
+        dest='csv',
+    )
+    opt_parser.add_option(
+        '--html',
+        dest='html',
+    )
+    opt_parser.add_option(
+        '--json',
+        dest='json',
+    )
+    opts, args = opt_parser.parse_args()
+
+    # Make sure there's at least 1 arguments
+    if len(args) < 1:
+        opt_parser.print_usage()
+        return 1
+
+    jira_project = args[0]
+
     # 1. Initialize JIRA API
     print("Initialize JIRA API ...")
     api = jira_api()
+    jira_server = api.server
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
 
     # TODO: catch exception if the Launchpad API isn't open
@@ -262,29 +316,24 @@ def main():
     issue_index = 0
     issue_batch = 50
 
-    # jira_lp_db.append(colummns)
-
     while True:
         start_index = issue_index * issue_batch
         request = "project = {} " \
                 "AND summary ~ \"LP#\" " \
                 "AND status in (BLOCKED, Backlog, \"In Progress\", " \
                 "REVIEW,\"Selected for Development\")""".format(jira_project)
-        issues = jira.search_issues(request, startAt=start_index) # maxResults=2)
+        issues = jira.search_issues(request, startAt=start_index) #, maxResults=2)
 
         if not issues:
             break
+
         issue_index += 1
-        loading = ['\\', '|', '/', '-']
         # For each issue in JIRA with LP# in the title
         for issue in issues:
             summary = issue.fields.summary
             if "LP#" in summary:
                 num_issues += 1
-                print("{}".format(
-                    loading[num_issues % len(loading)]),
-                    flush=True,
-                    end="\b")
+                print("#",flush=True,end="")
 
                 lpbug_id = get_bug_id(summary)
                 lpbug_importance = ""
@@ -314,7 +363,7 @@ def main():
                         'Summary': summary,
                         'Status': issue.fields.status.name,
                         'LaunchPad ID': lpbug_id,
-                        'Heat': lpbug.heat,
+                        'Heat': str(lpbug.heat),
                         'Importance': lpbug_importance,
                         'Packages': bug_pkg,
                         "Devel": lpbug_devel,
@@ -343,19 +392,36 @@ def main():
                         "Trusty": "N/A"
                     })
 
+    print("\nFound %s issues" % len(jira_lp_db))
 
-main()
 
-# Load report
-# with open('lp-jira.json', 'r') as fp:
-#     jira_lp_db = json.load(fp)
+    # Create a table version of the
+    jira_lp_db_table = []
+    if jira_lp_db:
+        jira_lp_db_table.append(list(jira_lp_db[0].keys()))
+        jira_lp_db_table += [ list(x.values()) for x in jira_lp_db ]
+    else:
+        return 1
 
-# print_table(jira_lp_db,sep=" | ")
 
-# Save report
-with open('lp-jira.json', 'w') as fp:
-    json.dump(jira_lp_db, fp, indent=2)
+    # Display the content of jira_lp_db based on the output option
+    if opts.json:
+        with open(opts.json, 'w') as fp:
+            json.dump(jira_lp_db, fp, indent=2)
+        print("JSON report saved as %s" % opts.json)
 
-update_html_report()
+    if opts.html:
+        print_html_report(opts.html)
+        print("HTML report saved as %s" % opts.html)
 
-print("Found %s issues" % len(jira_lp_db))
+    if opts.csv:
+        print_table(jira_lp_db_table,sep=";", limit=1024, align=False, draw_title=False, file=opts.csv)
+        print("CSV report saved as %s" % opts.csv)
+
+    if not opts.csv and not opts.html and not opts.json:
+        print_table(jira_lp_db_table,sep=" | ",limit=60, align=True, draw_title=True, file="/dev/stdout")
+
+    return 0
+
+
+sys.exit(main())
