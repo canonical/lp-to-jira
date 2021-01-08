@@ -4,7 +4,6 @@
 
 
 import sys
-import os
 import json
 import datetime
 
@@ -40,34 +39,36 @@ colummns = ["Jira ID",
             ] + series
 
 importance_color = {
-    "Critical":'style="color:#d12b1f"',
-    "High":'style="color:#e07714"',
-    "Medium":'style="color:#0b9b3d"',
-    "Low":"",
-    "Wishlist":'style="color:#2727a7"',
-    "Undecided":'style="color:#6d6d6e"',
-    "Unknown":""
+    "Critical": 'style="color:#d12b1f"',
+    "High": 'style="color:#e07714"',
+    "Medium": 'style="color:#0b9b3d"',
+    "Low": "",
+    "Wishlist": 'style="color:#2727a7"',
+    "Undecided": 'style="color:#6d6d6e"',
+    "Unknown": ""
 }
 
 status_color = {
-    "New":'style="background-color:#af7850"',
-    "Confirmed":'style="background-color:#E94348"',
-    "Incomplete":'style="background-color:#E94348"',
-    "Triaged":'style="background-color:#F77200"',
-    "Fix Committed":'style="background-color:#b5d4a7"',
-    "Fix Released":'style="background-color:#6ab44b"'
+    "New": 'style="background-color:#af7850"',
+    "Confirmed": 'style="background-color:#E94348"',
+    "Incomplete": 'style="background-color:#E94348"',
+    "Triaged": 'style="background-color:#F77200"',
+    "Fix Committed": 'style="background-color:#b5d4a7"',
+    "Fix Released": 'style="background-color:#6ab44b"'
 }
 
+
 def status_cell(status):
-    return "<td %s>%s</td>" % (status_color.get(status,""), status)
+    return "<td %s>%s</td>" % (status_color.get(status, ""), status)
+
 
 def java_script():
-    'How to sort a table https://www.w3schools.com/howto/howto_js_sort_table.asp'
+    'Sort a table https://www.w3schools.com/howto/howto_js_sort_table.asp'
     'Addition of numeric boolean to allow sorting based on numbers'
     script = """\
     <script>
     function sortTable(n,numerical) {
-        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount=0;
         table = document.getElementById("JIRA-LP-TABLE");
         switching = true;
         // Set the sorting direction to ascending:
@@ -158,7 +159,8 @@ def print_html_report(file):
 
     html_data += "<body>\n"
 
-    html_data += "<p>Report generated on {}</p>\n".format(datetime.datetime.now())
+    html_data += "<p>Report generated on {}</p>\n" \
+        .format(datetime.datetime.now())
     html_data += '<table id="JIRA-LP-TABLE">\n'
 
     title = True
@@ -167,7 +169,7 @@ def print_html_report(file):
             headers = entry.keys()
             line = ""
             line += "<tr>\n"
-            index =0
+            index = 0
             for header in headers:
                 line += '<th onclick="sortTable(%d,false)">%s</th>\n' % \
                     (index, header)
@@ -177,16 +179,21 @@ def print_html_report(file):
             title = False
 
         line = "<tr>\n"
-        line +="\t<td><a href=%s/browse/%s>%s</a></td>\n" % \
+        line += "\t<td><a href=%s/browse/%s>%s</a></td>\n" % \
             (jira_server, entry['JIRA ID'], entry['JIRA ID'])
-        line += "\t<td>%s</td>\n" % (entry['Summary'][:80]+" ..." if len(entry['Summary'])>80 else entry['Summary'])
+        line += "\t<td>%s</td>\n" % \
+            (entry['Summary'][:80]+" ..." if len(entry['Summary']) > 80
+                else entry['Summary'])
         line += "\t<td>%s</td>\n" % entry['Status']
 
         line += "\t<td><a href=https://pad.lv/%s>LP#%s</a></td>\n" % \
             (entry['LaunchPad ID'], entry['LaunchPad ID'])
         line += "\t<td>%s</td>\n" % entry['Heat']
-        line += "\t<td %s><b>%s</b></td>\n" % (importance_color.get(entry['Importance']), entry['Importance'])
-        line += "\t<td>%s</td>\n" % ("multiple packages" if len(entry['Packages'].split(","))>2 else entry['Packages'])
+        line += "\t<td %s><b>%s</b></td>\n" % \
+            (importance_color.get(entry['Importance']), entry['Importance'])
+        line += "\t<td>%s</td>\n" % \
+            ("multiple packages" if len(entry['Packages'].split(",")) > 2
+                else entry['Packages'])
 
         for serie in series:
             line += ("\t" + status_cell(entry[serie]) + "\n")
@@ -201,22 +208,30 @@ def print_html_report(file):
         html_file.write(html_data)
 
 
-def print_table(table, sep = "|", draw_title = True, limit=60, align=True, file="/dev/stdout"):
+def print_table(
+        table,
+        sep="|",
+        draw_title=True,
+        limit=60,
+        align=True,
+        file="/dev/stdout"):
     """
     Print a 2D list on stdout assuming it is rectangular (matrix) shape (NxM)
     TODO: handle non rectangular list
     limit: allows to limit the maximum size per column (default 60)
-    draw_title: if the first line of your table is the header, this will print a line underneath
+    draw_title: if the first line of your table is the header
+        this will print a line underneath
     """
 
     if not table:
         return
 
-    #How many Columns
+    # How many Columns
     cols = len(table[0])
 
     # Assume every line of the table are identical
-    cols_size = [len( max( [id[i] for id in table],key=len)) for i in range(cols)]
+    cols_size = [len(max([id[i] for id in table], key=len))
+                 for i in range(cols)]
 
     # limit size of some cloumns if needed
     cols_size = [limit if x > limit else x for x in cols_size]
@@ -224,7 +239,8 @@ def print_table(table, sep = "|", draw_title = True, limit=60, align=True, file=
     with open(file, 'w') as output_file:
         for line in table:
             if align:
-                line_adjust = ['{:{width}s}'.format(line[x][:limit],width=cols_size[x]) for x in range(cols)]
+                line_adjust = ['{:{width}s}'.format(
+                    line[x][:limit], width=cols_size[x]) for x in range(cols)]
             else:
                 line_adjust = line
 
@@ -238,7 +254,7 @@ def print_table(table, sep = "|", draw_title = True, limit=60, align=True, file=
 
 def get_bug_id(summary):
     "Extract the bug id from a jira title whivh would icnlude LP#"
-    id= ""
+    id = ""
 
     if "LP#" in summary:
         for char in summary[summary.find("LP#")+3:]:
@@ -319,10 +335,10 @@ Examples:
     while True:
         start_index = issue_index * issue_batch
         request = "project = {} " \
-                "AND summary ~ \"LP#\" " \
-                "AND status in (BLOCKED, Backlog, \"In Progress\", " \
-                "REVIEW,\"Selected for Development\")""".format(jira_project)
-        issues = jira.search_issues(request, startAt=start_index) #, maxResults=2)
+            "AND summary ~ \"LP#\" " \
+            "AND status in (BLOCKED, Backlog, \"In Progress\", " \
+            "REVIEW,\"Selected for Development\")""".format(jira_project)
+        issues = jira.search_issues(request, startAt=start_index)
 
         if not issues:
             break
@@ -333,7 +349,7 @@ Examples:
             summary = issue.fields.summary
             if "LP#" in summary:
                 num_issues += 1
-                print("#",flush=True,end="")
+                print("#", flush=True, end="")
 
                 lpbug_id = get_bug_id(summary)
                 lpbug_importance = ""
@@ -347,7 +363,9 @@ Examples:
                 try:
                     lpbug = lp.bugs[int(lpbug_id)]
 
-                    list_pkg = [ x.bug_target_name.split()[0] for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name]
+                    list_pkg = [x.bug_target_name.split()[0]
+                                for x in lpbug.bug_tasks
+                                if "(Ubuntu)" in x.bug_target_name]
                     bug_pkg = ", ".join(list_pkg)
                     if len(list_pkg) == 1:
                         lpbug_importance = list(importance_color.keys())[min([list(importance_color.keys()).index(x.importance) for x in lpbug.bug_tasks])]
@@ -394,15 +412,13 @@ Examples:
 
     print("\nFound %s issues" % len(jira_lp_db))
 
-
     # Create a table version of the
     jira_lp_db_table = []
     if jira_lp_db:
         jira_lp_db_table.append(list(jira_lp_db[0].keys()))
-        jira_lp_db_table += [ list(x.values()) for x in jira_lp_db ]
+        jira_lp_db_table += [list(x.values()) for x in jira_lp_db]
     else:
         return 1
-
 
     # Display the content of jira_lp_db based on the output option
     if opts.json:
@@ -415,11 +431,13 @@ Examples:
         print("HTML report saved as %s" % opts.html)
 
     if opts.csv:
-        print_table(jira_lp_db_table,sep=";", limit=1024, align=False, draw_title=False, file=opts.csv)
+        print_table(jira_lp_db_table, sep=";", limit=1024,
+                    align=False, draw_title=False, file=opts.csv)
         print("CSV report saved as %s" % opts.csv)
 
     if not opts.csv and not opts.html and not opts.json:
-        print_table(jira_lp_db_table,sep=" | ",limit=60, align=True, draw_title=True, file="/dev/stdout")
+        print_table(jira_lp_db_table, sep=" | ", limit=60,
+                    align=True, draw_title=True, file="/dev/stdout")
 
     return 0
 
