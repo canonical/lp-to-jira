@@ -15,19 +15,21 @@ from jira_api import jira_api
 jira_server = "https://warthogs.atlassian.net/"
 jira_project = "FR"
 
+series = ["Devel",
+          "Groovy",
+          "Focal",
+          "Bionic",
+          "Xenial",
+          "Trusty"]
+
 colummns = ["Jira ID",
             "Summary",
             "Status",
             "LaunchPad ID",
             "Heat",
-            "Package(s)",
-            "Devel",
-            "Groovy",
-            "Focal",
-            "Bionic",
-            "Xenial",
-            "Trusty"
-            ]
+            "Importance",
+            "Packages",
+            ] + series
 
 jira_lp_db = []
 
@@ -38,10 +40,15 @@ api = None
 dry_run = True
 
 # Status for report
-
-orange_cell = 'style="background-color:#FFcc66"'
-green_cell = 'style="background-color:#00cc66"'
-red_cell = 'style="background-color:#ce2c2c"'
+importance_color = {
+    "Critical":'style="color:#d12b1f"',
+    "High":'style="color:#e07714"',
+    "Medium":'style="color:#0a471f"',
+    "Low":"",
+    "Wishlist":'style="color:#2727a7"',
+    "Undecided":'style="color:#6d6d6e"',
+    "Unknown":""
+}
 
 status_color = {
     "New":'style="background-color:#af7850"',
@@ -51,6 +58,9 @@ status_color = {
     "Fix Committed":'style="background-color:#b5d4a7"',
     "Fix Released":'style="background-color:#6ab44b"'
 }
+
+def status_cell(status):
+    return "<td %s>%s</td>" % (status_color.get(status,""), status)
 
 def usage():
     print("TBD")
@@ -160,51 +170,34 @@ def update_html_report():
     title = True
     for entry in jira_lp_db:
         if title:
-            line = ("""\
-        <tr>
-            <th>{}</th>
-            <th>{}</th>
-            <th onclick="sortTable(2,false)">{} (sort)</th>
-            <th>{}</th>
-            <th onclick="sortTable(4,true)">{} (sort)</th>
-            <th>{}</th>
-            <th>{}</th>
-            <th>{}</th>
-            <th>{}</th>
-            <th>{}</th>
-            <th>{}</th>
-            <th>{}</th>
-        </tr>
-                """).format(entry[0],entry[1],entry[2],entry[3],entry[4],entry[5],entry[6],entry[7],entry[8],entry[9],entry[10],entry[11])
+            headers = entry.keys()
+            line = ""
+            line += "<tr>\n"
+            index =0
+            for header in headers:
+                line += '<th onclick="sortTable(%d,false)">%s</th>\n' % \
+                    (index, header)
+                index += 1
+            line += "</tr>\n"
             html_data += line
             title = False
         else:
-            line = ("""\
-        <tr>
-            <td><a href={}/browse/{}>{}</a></td>
-            <td>{}</td>
-            <td>{}</td>
-            <td><a href=https://pad.lv/{}>LP#{}</a></td>
-            <td>{}</td>
-            <td>{}</td>
-            <td {}>{}</td>
-            <td {}>{}</td>
-            <td {}>{}</td>
-            <td {}>{}</td>
-            <td {}>{}</td>
-            <td {}>{}</td>
-        </tr>""").format(jira_server, entry[0], entry[0],
-                        entry[1][:80]+" ..." if len(entry[1])>80 else entry[1],
-                        entry[2],
-                        entry[3], entry[3],
-                        entry[4],
-                        "multiple packages" if len(entry[5].split(","))>2 else entry[5],
-                        status_color.get(entry[6]),entry[6],
-                        status_color.get(entry[7]),entry[7],
-                        status_color.get(entry[8]),entry[8],
-                        status_color.get(entry[9]),entry[9],
-                        status_color.get(entry[10]),entry[10],
-                        status_color.get(entry[11]),entry[11])
+            line = "<tr>"
+            line +="<td><a href=%s/browse/%s>%s</a></td>" % \
+                (jira_server, entry['JIRA ID'], entry['JIRA ID'])
+            line += "<td>%s</td>" % (entry['Summary'][:80]+" ..." if len(entry['Summary'])>80 else entry['Summary'])
+            line += "<td>%s</td>" % entry['Status']
+
+            line += "<td><a href=https://pad.lv/%s>LP#%s</a></td>" % \
+                (entry['LaunchPad ID'], entry['LaunchPad ID'])
+            line += "<td>%d</td>" % entry['Heat']
+            line += "<td %s><b>%s</b></td>" % (importance_color.get(entry['Importance']), entry['Importance'])
+            line += "<td>%s</td>" % ("multiple packages" if len(entry['Packages'].split(","))>2 else entry['Packages'])
+
+            for serie in series:
+                line += status_cell(entry[serie])
+
+            line += "</tr>\n"
             html_data += line + "\n"
 
     html_data += "</table>"
@@ -269,7 +262,7 @@ def main():
     issue_index = 0
     issue_batch = 50
 
-    jira_lp_db.append(colummns)
+    # jira_lp_db.append(colummns)
 
     while True:
         start_index = issue_index * issue_batch
@@ -277,8 +270,7 @@ def main():
                 "AND summary ~ \"LP#\" " \
                 "AND status in (BLOCKED, Backlog, \"In Progress\", " \
                 "REVIEW,\"Selected for Development\")""".format(jira_project)
-        # issues = jira.search_issues(request, startAt=start_index)
-        issues = jira.search_issues(request, startAt=start_index) #, maxResults=3)
+        issues = jira.search_issues(request, startAt=start_index) # maxResults=2)
 
         if not issues:
             break
@@ -295,6 +287,7 @@ def main():
                     end="\b")
 
                 lpbug_id = get_bug_id(summary)
+                lpbug_importance = ""
                 lpbug_devel = ""
                 lpbug_groovy = ""
                 lpbug_focal = ""
@@ -308,6 +301,7 @@ def main():
                     list_pkg = [ x.bug_target_name.split()[0] for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name]
                     bug_pkg = ", ".join(list_pkg)
                     if len(list_pkg) == 1:
+                        lpbug_importance = list(importance_color.keys())[min([list(importance_color.keys()).index(x.importance) for x in lpbug.bug_tasks])]
                         lpbug_devel = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name])
                         lpbug_groovy = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Groovy)" in x.bug_target_name])
                         lpbug_focal = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Focal)" in x.bug_target_name])
@@ -315,33 +309,39 @@ def main():
                         lpbug_xenial = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Xenial)" in x.bug_target_name])
                         lpbug_trusty = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Trusty)" in x.bug_target_name])
 
-                    jira_lp_db.append([issue.key,
-                        summary,
-                        issue.fields.status.name,
-                        lpbug_id,
-                        str(lpbug.heat),
-                        bug_pkg,
-                        lpbug_devel,
-                        lpbug_groovy,
-                        lpbug_focal,
-                        lpbug_bionic,
-                        lpbug_xenial,
-                        lpbug_trusty])
+                    jira_lp_db.append({
+                        'JIRA ID': issue.key,
+                        'Summary': summary,
+                        'Status': issue.fields.status.name,
+                        'LaunchPad ID': lpbug_id,
+                        'Heat': lpbug.heat,
+                        'Importance': lpbug_importance,
+                        'Packages': bug_pkg,
+                        "Devel": lpbug_devel,
+                        "Groovy": lpbug_groovy,
+                        "Focal": lpbug_focal,
+                        "Bionic": lpbug_bionic,
+                        "Xenial": lpbug_xenial,
+                        "Trusty": lpbug_trusty
+                    })
 
                 except Exception:
                     print("\nCouldn't find the Launchpad bug {}".format(lpbug_id))
-                    jira_lp_db.append([issue.key,
-                        summary,
-                        issue.fields.status.name,
-                        lpbug_id,
-                        "N/A",
-                        "Error",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        ""])
+                    jira_lp_db.append({
+                        'JIRA ID': issue.key,
+                        'Summary': summary,
+                        'Status': issue.fields.status.name,
+                        'LaunchPad ID': "N/A",
+                        'Heat': "N/A",
+                        'Importance': "N/A",
+                        'Packages': "N/A",
+                        "Devel": "N/A",
+                        "Groovy": "N/A",
+                        "Focal": "N/A",
+                        "Bionic": "N/A",
+                        "Xenial": "N/A",
+                        "Trusty": "N/A"
+                    })
 
 
 main()
@@ -350,7 +350,7 @@ main()
 # with open('lp-jira.json', 'r') as fp:
 #     jira_lp_db = json.load(fp)
 
-print_table(jira_lp_db,sep=" | ")
+# print_table(jira_lp_db,sep=" | ")
 
 # Save report
 with open('lp-jira.json', 'w') as fp:
@@ -358,6 +358,4 @@ with open('lp-jira.json', 'w') as fp:
 
 update_html_report()
 
-
-
-#print("Found %s issues" % len(jira_lp_db))
+print("Found %s issues" % len(jira_lp_db))
