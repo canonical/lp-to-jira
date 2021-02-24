@@ -8,12 +8,14 @@ import os
 import json
 
 from optparse import OptionParser
+from datetime import datetime, timedelta
 
 from launchpadlib.launchpad import Launchpad
 from jira import JIRA
 from jira_api import jira_api
 
 
+# TODO: paramaterize this, for now we just hardcode
 pkg_to_component = {
     "nplan": "netplan",
     "netplan.io": "netplan",
@@ -27,7 +29,9 @@ pkg_to_component = {
     "openjdk-lts": "OpenJDK",
     "apt": "Package Management",
     "aptdaemon": "Package Management",
-    "ubuntu-release-upgrader": "Package Management"
+    "ubuntu-release-upgrader": "Package Management",
+    "solutions-qa-ci": "Solutions QA CI",
+    "cpe-foundation": "FCE",
 }
 default_component = "Distro"
 
@@ -57,6 +61,35 @@ def getLpBugPkg(lp, bug):
                 bug_pkg = task.bug_target_name.split()[0]
 
     return bug_pkg
+
+
+def getAllLpProjectBugs(lp, project, days=None):
+    """Return iterable IBugTasks of all Bugs in a Project filed in the past n
+    days. If days is not specified, return all Bugs."""
+
+    project = lp.projects[project]
+    created_since = None
+
+    if days:
+        created_since = datetime.now() - timedelta(days)
+        created_since = created_since.strftime('%Y-%m-%d')
+
+    bugs = project.searchTasks(
+        created_since=created_since,
+        status=[
+            'New',
+            'Incomplete',
+            'Triaged',
+            'Opinion',
+            'Invalid',
+            'Won\'t Fix',
+            'Confirmed',
+            'In Progress',
+            'Fix Committed',
+            'Fix Released'
+        ])
+
+    return bugs
 
 
 def isBugInJira(jira, bug, project_id):
@@ -143,11 +176,18 @@ options:
                 print the JIRA issue ID if found
     -l, --label LABEL
                 Add LABEL to the JIRA issue after creation
+    -s SYNC_PROJECT_BUGS, --sync_project_bugs=SYNC_PROJECT_BUGS
+                The name of the LP Project. This will bring in every
+                bug from your project if you do not also specify days
+    -d DAYS, --days=DAYS
+                Only look for LP Bugs in the past n days
+    --no-lp-tag
 
 Examples:
     lp-to-jira 3215487 FR
     lp-to-jira -e 3215487 FR
     lp-to-jira -l ubuntu-meeting 3215487 PR
+    lp-to-jira -s ubuntu -d 3 IQA
         """
 
     opt_parser = OptionParser(usage)
@@ -162,9 +202,28 @@ Examples:
     )
 
     opt_parser.add_option(
+        '-s', '--sync_project_bugs',
+        dest='sync_project_bugs',
+        action='store',
+        type=str,
+        help='Adds all bugs from a specified LP Project to specified Jira board'
+            ' if they are not already on the Jira board.'
+            ' Use --days to narrow down bugs'
+    )
+
+    opt_parser.add_option(
+        '-d', '--days',
+        dest='days',
+        action='store',
+        type=int,
+        help='Only look for LP Bugs in the past n days'
+    )
+
+    opt_parser.add_option(
         '--no-lp-tag',
         dest='no_lp_tag',
-        action='store_true'
+        action='store_true',
+        help='Do not add tag to LP Bug'
     )
 
     opts, args = opt_parser.parse_args()
@@ -176,6 +235,16 @@ Examples:
     # Connect to the JIRA API
     api = jira_api()
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
+
+    if opts.sync_project_bugs:
+        bugs_list = getAllLpProjectBugs(lp, opts.sync_project_bugs, opts.days)
+
+        for bug in bugs_list:
+            bug_number = bug.bug_link.split('/')[-1]
+            print(bug_number)
+            # bug = getLpBug(lp, bug_number)
+            # lpToJiraBug(lp, jira, bug, args[0], opts)
+        return 0
 
     # Make sure there's 2 arguments
     if len(args) < 2:
