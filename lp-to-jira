@@ -36,7 +36,7 @@ pkg_to_component = {
 default_component = "Distro"
 
 
-def getLpBug(lp, bug_number):
+def get_lp_bug(lp, bug_number):
     """Make sure the bug ID exists, return bug"""
 
     bug = None
@@ -49,7 +49,7 @@ def getLpBug(lp, bug_number):
     return bug
 
 
-def getLpBugPkg(lp, bug):
+def get_lp_bug_pkg(lp, bug):
     """From a LP bug, get its package"""
 
     bug_pkg = None
@@ -63,18 +63,22 @@ def getLpBugPkg(lp, bug):
     return bug_pkg
 
 
-def getAllLpProjectBugs(lp, project, days=None):
+def get_all_lp_project_bugs(lp, project, days=None):
     """Return iterable IBugTasks of all Bugs in a Project filed in the past n
     days. If days is not specified, return all Bugs."""
 
-    project = lp.projects[project]
+    try:
+        lp_project = lp.projects[project]
+    except KeyError:
+        print("Couldn't find the Launchpad project \"{}\"".format(project))
+        sys.exit(1)
+
     created_since = None
 
     if days:
-        created_since = datetime.now() - timedelta(days)
-        created_since = created_since.strftime('%Y-%m-%d')
+        created_since = (datetime.now() - timedelta(days)).strftime('%Y-%m-%d')
 
-    bugs = project.searchTasks(
+    bugs = lp_project.searchTasks(
         created_since=created_since,
         status=[
             'New',
@@ -92,7 +96,7 @@ def getAllLpProjectBugs(lp, project, days=None):
     return bugs
 
 
-def isBugInJira(jira, bug, project_id):
+def is_bug_in_jira(jira, bug, project_id):
     """Checks Jira for the same ID as the Bug you're trying to import"""
 
     existing_issue = jira.search_issues(
@@ -108,11 +112,11 @@ def isBugInJira(jira, bug, project_id):
     return False
 
 
-def buildJiraIssue(lp, bug, project_id):
+def build_jira_issue(lp, bug, project_id):
     """Builds and return a dict to create a Jira Issue from"""
 
     # Get bug info from LP
-    bug_pkg = getLpBugPkg(lp, bug)
+    bug_pkg = get_lp_bug_pkg(lp, bug)
 
     # Build the Jira Issue from the LP info
     issue_dict = {
@@ -130,7 +134,7 @@ def buildJiraIssue(lp, bug, project_id):
     return issue_dict
 
 
-def createJiraIssue(jira, issue_dict, bug):
+def create_jira_issue(jira, issue_dict, bug):
     """Create and return a Jira Issue from issue_dict"""
 
     # Import the bug and return the JIRA ID for said bug
@@ -145,18 +149,18 @@ def createJiraIssue(jira, issue_dict, bug):
     return new_issue
 
 
-def lpToJiraBug(lp, jira, bug, project_id, opts):
+def lp_to_jira_bug(lp, jira, bug, project_id, opts):
     """Create JIRA issue at project_id for a given Launchpad bug"""
     
-    if isBugInJira(jira, bug, project_id):
+    if is_bug_in_jira(jira, bug, project_id):
         return
     
-    issue_dict = buildJiraIssue(lp, bug, project_id)
+    issue_dict = build_jira_issue(lp, bug, project_id)
     if opts.label:
         # Add labels if specified
         issue_dict["labels"] = [opts.label]
 
-    jira_issue = createJiraIssue(jira, issue_dict, bug)
+    jira_issue = create_jira_issue(jira, issue_dict, bug)
 
     if not opts.no_lp_tag:
         # Add reference to the JIRA entry in the bugs on Launchpad
@@ -237,13 +241,12 @@ Examples:
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
 
     if opts.sync_project_bugs:
-        bugs_list = getAllLpProjectBugs(lp, opts.sync_project_bugs, opts.days)
+        bugs_list = get_all_lp_project_bugs(lp, opts.sync_project_bugs, opts.days)
 
         for bug in bugs_list:
             bug_number = bug.bug_link.split('/')[-1]
-            print(bug_number)
-            # bug = getLpBug(lp, bug_number)
-            # lpToJiraBug(lp, jira, bug, args[0], opts)
+            bug = get_lp_bug(lp, bug_number)
+            lp_to_jira_bug(lp, jira, bug, args[0], opts)
         return 0
 
     # Make sure there's 2 arguments
@@ -253,18 +256,18 @@ Examples:
 
     bug_number = args[0]
     project_id = args[1]
-    bug = getLpBug(lp, bug_number)
+    bug = get_lp_bug(lp, bug_number)
 
     if opts.exists:
         # We are simply testing if the bug was already in JIRA
-        if isBugInJira(jira, bug, project_id):
+        if is_bug_in_jira(jira, bug, project_id):
             return 0
         print("Launchpad Issue {} is not in JIRA project {}".format(
             bug.id, project_id))
         return 1
 
     # Create the Jira Issue
-    lpToJiraBug(lp, jira, bug, project_id, opts)
+    lp_to_jira_bug(lp, jira, bug, project_id, opts)
 
     return 0
 
