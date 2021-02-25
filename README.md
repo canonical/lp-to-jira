@@ -12,7 +12,7 @@ JIRA API token can be created here https://id.atlassian.com/manage-profile/secur
 
 ## Usage:
 ```
-usage: lp-to-jira [options] bug-id project-id
+Usage: lp-to-jira [options] bug-id project-id
 
 Create JIRA entry for a given Launchpad bug ID
 
@@ -22,11 +22,18 @@ options:
                 print the JIRA issue ID if found
     -l, --label LABEL
                 Add LABEL to the JIRA issue after creation
+    -s SYNC_PROJECT_BUGS, --sync_project_bugs=SYNC_PROJECT_BUGS
+                The name of the LP Project. This will bring in every
+                bug from your project if you do not also specify days
+    -d DAYS, --days=DAYS
+                Only look for LP Bugs in the past n days
+    --no-lp-tag
 
 Examples:
     lp-to-jira 3215487 FR
     lp-to-jira -e 3215487 FR
     lp-to-jira -l ubuntu-meeting 3215487 PR
+    lp-to-jira -s ubuntu -d 3 IQA
 ```
 
 # lp-to-jira-report
