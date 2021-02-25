@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 from launchpadlib.launchpad import Launchpad
 from jira import JIRA
-from jira_api import jira_api
+from LpToJira.jira_api import jira_api
 
 
 jira_server = ""
@@ -440,6 +440,3 @@ Examples:
                     align=True, draw_title=True, file="/dev/stdout")
 
     return 0
-
-
-sys.exit(main())

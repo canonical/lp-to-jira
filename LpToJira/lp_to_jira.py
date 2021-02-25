@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from launchpadlib.launchpad import Launchpad
 from jira import JIRA
-from jira_api import jira_api
+from LpToJira.jira_api import jira_api
 
 
 # TODO: paramaterize this, for now we just hardcode
@@ -270,6 +270,3 @@ Examples:
     lp_to_jira_bug(lp, jira, bug, project_id, opts)
 
     return 0
-
-
-sys.exit(main())
