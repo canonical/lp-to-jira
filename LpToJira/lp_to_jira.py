@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 from launchpadlib.launchpad import Launchpad
 from jira import JIRA
-from jira_api import jira_api
+from LpToJira.jira_api import jira_api
 
 
 pkg_to_component = {
@@ -153,6 +153,3 @@ Examples:
     print("Created {}/browse/{}".format(api.server, new_issue.key))
 
     return 0
-
-
-sys.exit(main())
