@@ -11,6 +11,8 @@ from optparse import OptionParser
 from datetime import datetime, timedelta
 
 from launchpadlib.launchpad import Launchpad
+from launchpadlib.credentials import UnencryptedFileCredentialStore
+
 from jira import JIRA
 from LpToJira.jira_api import jira_api
 
@@ -234,7 +236,11 @@ Examples:
 
     # Connect to Launchpad API
     # TODO: catch exception if the Launchpad API isn't open
-    lp = Launchpad.login_with('foundations', 'production', version='devel')
+    credential_store = UnencryptedFileCredentialStore(os.path.expanduser("~/.lp_creds"))
+    lp = Launchpad.login_with(
+        'foundations',
+        'production',
+        version='devel',credential_store=credential_store)
 
     # Connect to the JIRA API
     api = jira_api()
