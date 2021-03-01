@@ -10,6 +10,8 @@ import json
 from optparse import OptionParser
 
 from launchpadlib.launchpad import Launchpad
+from launchpadlib.credentials import UnencryptedFileCredentialStore
+
 from jira import JIRA
 from LpToJira.jira_api import jira_api
 
@@ -77,7 +79,11 @@ Examples:
     # 1. Connect to Launchpad API
 
     # TODO: catch exception if the Launchpad API isn't open
-    lp = Launchpad.login_with('foundations', 'production', version='devel')
+    credential_store = UnencryptedFileCredentialStore(os.path.expanduser("~/.lp_creds"))
+    lp = Launchpad.login_with(
+        'foundations',
+        'production',
+        version='devel',credential_store=credential_store)
 
     # 2. Make sure the bug ID exist
     bug = None

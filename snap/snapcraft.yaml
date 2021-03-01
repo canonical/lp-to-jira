@@ -21,12 +21,16 @@ parts:
 apps:
   lp-to-jira:
     command: lp-to-jira
-    plugs: [network]
+    plugs:
+      - network
+      - home
     environment:
       LANG: C.UTF-8
 
   lp-to-jira-report:
     command: lp-to-jira-report
-    plugs: [network]
+    plugs:
+      - network
+      - home
     environment:
       LANG: C.UTF-8
