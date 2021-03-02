@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="LpToJira",
-    version="0.1",
+    version="0.2",
     author="Matthieu Clemenceau",
     author_email="matthieu.clemenceau@canonical.com",
     description=("A Command Line helper to import launchpad bug in JIRA."),

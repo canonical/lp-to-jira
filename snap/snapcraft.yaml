@@ -1,6 +1,6 @@
 name: lp-to-jira
 base: core18
-version: '0.1'
+version: '0.2'
 summary: Command Line Interface to import Launchpad content into JIRA
 description: |
   lp-to-jira allows you to import bug from a launchpad project into a JIRA
@@ -27,7 +27,7 @@ apps:
     environment:
       LANG: C.UTF-8
 
-  lp-to-jira-report:
+  report:
     command: lp-to-jira-report
     plugs:
       - network
