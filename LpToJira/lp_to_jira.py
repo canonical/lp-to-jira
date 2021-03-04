@@ -34,6 +34,7 @@ pkg_to_component = {
     "ubuntu-release-upgrader": "Package Management",
     "solutions-qa-ci": "Solutions QA CI",
     "cpe-foundation": "FCE",
+    "fce-templates": "FCE Templates",
 }
 default_component = "Distro"
 
