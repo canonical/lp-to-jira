@@ -8,8 +8,12 @@ import json
 from jira import JIRA
 
 class jira_api():
-    def __init__(self,credstore="{}/.jira.token".format(os.getenv("SNAP_USER_COMMON"))):
-        self.credstore = credstore
+    def __init__(self,credstore="{}/.jira.token".format(os.path.expanduser('~'))):
+        snap_home = os.getenv("SNAP_USER_COMMON")
+        if snap_home:
+            self.credstore = "{}/.jira.token".format(snap_home)
+        else:
+            self.credstore = credstore
         try:
             with open(self.credstore) as f:
                 config = json.load(f)
