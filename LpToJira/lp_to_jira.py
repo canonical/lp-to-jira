@@ -133,7 +133,7 @@ def build_jira_issue(lp, bug, project_id):
     jira_component.append(
         {"name":pkg_to_component.get(bug_pkg, default_component)})
     issue_dict["components"] = jira_component
-    
+
     return issue_dict
 
 
@@ -154,10 +154,10 @@ def create_jira_issue(jira, issue_dict, bug):
 
 def lp_to_jira_bug(lp, jira, bug, project_id, opts):
     """Create JIRA issue at project_id for a given Launchpad bug"""
-    
+
     if is_bug_in_jira(jira, bug, project_id):
         return
-    
+
     issue_dict = build_jira_issue(lp, bug, project_id)
     if opts.label:
         # Add labels if specified
@@ -237,7 +237,11 @@ Examples:
 
     # Connect to Launchpad API
     # TODO: catch exception if the Launchpad API isn't open
-    credential_store = UnencryptedFileCredentialStore(os.path.expanduser("~/.lp_creds"))
+    snap_home = os.getenv("SNAP_USER_COMMON")
+    if snap_home:
+        credential_store = UnencryptedFileCredentialStore("{}/.lp_creds".format(snap_home))
+    else:
+        credential_store = UnencryptedFileCredentialStore(os.path.expanduser("~/.lp_creds"))
     lp = Launchpad.login_with(
         'foundations',
         'production',
