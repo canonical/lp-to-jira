@@ -23,6 +23,7 @@ jira = None
 api = None
 
 series = ["Devel",
+          "Impish",
           "Groovy",
           "Focal",
           "Bionic",
@@ -354,6 +355,7 @@ Examples:
                 lpbug_id = get_bug_id(summary)
                 lpbug_importance = ""
                 lpbug_devel = ""
+                lpbug_impish = ""
                 lpbug_groovy = ""
                 lpbug_focal = ""
                 lpbug_bionic = ""
@@ -370,6 +372,7 @@ Examples:
                     if len(list_pkg) == 1:
                         lpbug_importance = list(importance_color.keys())[min([list(importance_color.keys()).index(x.importance) for x in lpbug.bug_tasks])]
                         lpbug_devel = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name])
+                        lpbug_impish = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Impish)" in x.bug_target_name])
                         lpbug_groovy = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Groovy)" in x.bug_target_name])
                         lpbug_focal = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Focal)" in x.bug_target_name])
                         lpbug_bionic = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Bionic)" in x.bug_target_name])
@@ -385,6 +388,7 @@ Examples:
                         'Importance': lpbug_importance,
                         'Packages': bug_pkg,
                         "Devel": lpbug_devel,
+                        "Impish": lpbug_impish,
                         "Groovy": lpbug_groovy,
                         "Focal": lpbug_focal,
                         "Bionic": lpbug_bionic,
@@ -403,6 +407,7 @@ Examples:
                         'Importance': "N/A",
                         'Packages': "N/A",
                         "Devel": "N/A",
+                        "Impish": "N/A",
                         "Groovy": "N/A",
                         "Focal": "N/A",
                         "Bionic": "N/A",
