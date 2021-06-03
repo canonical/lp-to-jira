@@ -252,7 +252,6 @@ Examples:
         api = jira_api()
     except ValueError as exc:
         return "ERROR: Cannot initialize JIRA API."
-        return 1
 
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
 
