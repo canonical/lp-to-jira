@@ -25,7 +25,7 @@ class jira_api():
             print('')
             gather_token = input('Do you want to enter your JIRA token information now? (Y/n) ')
             if gather_token == 'n':
-                return 1
+                raise ValueError("JIRA API isn't initialized")
             self.server = input('Please enter your jira server address : ')
             self.login = input('Please enter your email login for JIRA : ')
             self.token = input('Please enter your JIRA API Token (see https://id.atlassian.com/manage-profile/security/api-tokens) : ')
@@ -39,6 +39,4 @@ class jira_api():
                     with open(self.credstore,'w+') as f:
                         json.dump(data,(f))
                 except (FileNotFoundError, json.JSONDecodeError):
-                    # TODO: Probably better error handling can be done here
-                    print("Something went wrong saving credentials")
-                    return 1
+                    raise ValueError("JIRA API isn't initialized")

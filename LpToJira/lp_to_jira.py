@@ -248,7 +248,11 @@ Examples:
         version='devel',credential_store=credential_store)
 
     # Connect to the JIRA API
-    api = jira_api()
+    try:
+        api = jira_api()
+    except ValueError as exc:
+        return "ERROR: Cannot initialize JIRA API."
+
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
 
     if opts.sync_project_bugs:
