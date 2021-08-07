@@ -66,7 +66,7 @@ def get_lp_bug_pkg(lp, bug):
     return bug_pkg
 
 
-def get_all_lp_project_bugs(lp, project, days=None):
+def get_all_lp_project_bug_tasks(lp, project, days=None):
     """Return iterable IBugTasks of all Bugs in a Project filed in the past n
     days. If days is not specified, return all Bugs."""
 
@@ -81,7 +81,7 @@ def get_all_lp_project_bugs(lp, project, days=None):
     if days:
         created_since = (datetime.now() - timedelta(days)).strftime('%Y-%m-%d')
 
-    bugs = lp_project.searchTasks(
+    bug_tasks = lp_project.searchTasks(
         created_since=created_since,
         status=[
             'New',
@@ -96,7 +96,7 @@ def get_all_lp_project_bugs(lp, project, days=None):
             'Fix Released'
         ])
 
-    return bugs
+    return bug_tasks
 
 
 def is_bug_in_jira(jira, bug, project_id):
@@ -129,9 +129,9 @@ def build_jira_issue(lp, bug, project_id):
         'issuetype': {'name': 'Bug'}
     }
 
-    jira_component = []
-    jira_component.append(
-        {"name":pkg_to_component.get(bug_pkg, default_component)})
+    jira_component = [
+        {"name": pkg_to_component.get(bug_pkg, default_component)}
+    ]
     issue_dict["components"] = jira_component
 
     return issue_dict
@@ -195,7 +195,7 @@ Examples:
     lp-to-jira -e 3215487 FR
     lp-to-jira -l ubuntu-meeting 3215487 PR
     lp-to-jira -s ubuntu -d 3 IQA
-        """
+"""
 
     opt_parser = OptionParser(usage)
     opt_parser.add_option(
@@ -256,11 +256,10 @@ Examples:
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
 
     if opts.sync_project_bugs:
-        bugs_list = get_all_lp_project_bugs(lp, opts.sync_project_bugs, opts.days)
+        tasks_list = get_all_lp_project_bug_tasks(lp, opts.sync_project_bugs, opts.days)
 
-        for bug in bugs_list:
-            bug_number = bug.bug_link.split('/')[-1]
-            bug = get_lp_bug(lp, bug_number)
+        for bug_task in tasks_list:
+            bug = bug_task.bug
             lp_to_jira_bug(lp, jira, bug, args[0], opts)
         return 0
 
