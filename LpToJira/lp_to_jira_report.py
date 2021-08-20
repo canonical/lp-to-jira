@@ -67,6 +67,35 @@ def java_script():
     'Addition of numeric boolean to allow sorting based on numbers'
     script = """\
     <script>
+    function search() {
+		// Declare variables
+		var input, filter, table, lines, line, value, show, i, txtValue;
+		input = document.getElementById("myInput");
+		filter = input.value.toUpperCase();
+		table = document.getElementById("JIRA-LP-TABLE");
+		lines = table.getElementsByTagName("TR");
+
+		// Loop through all table rows, and hide those who don't match the search query
+		for (i = 1; i < lines.length; i++) {
+			line = lines[i].getElementsByTagName("TD");
+			show = false;
+			for (j = 0; j < line.length; j++) {
+				value = line[j];
+				if (value) {
+					txtValue = value.textContent || value.innerText;
+					if (txtValue.toUpperCase().indexOf(filter) > -1) {
+						show = true;
+						break;
+					}
+				}
+			}
+			if(show)
+				lines[i].style.display = "";
+			else
+				lines[i].style.display = "none";
+		}
+	}
+
     function sortTable(n,numerical) {
         var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount=0;
         table = document.getElementById("JIRA-LP-TABLE");
@@ -149,9 +178,34 @@ def print_html_report(file):
     <html><title>Foundations JIRA / Launchpad status</title>
     <head>
     <style>
-    table, th, td {
+		#myInput {
+		background-position: 10px 12px; /* Position the search icon */
+		background-repeat: no-repeat; /* Do not repeat the icon image */
+		width: 100%; /* Full-width */
+		font-size: 14px; /* Increase font-size */
+		padding: 12px 20px 12px 40px; /* Add some padding */
+		border: 1px solid #ddd; /* Add a grey border */
+		margin-bottom: 12px; /* Add some space below the input */
+		}
+
+		#JIRA-LP-TABLE th, #JIRA-LP-TABLE td {
+		text-align: left; /* Left-align text */
+		}
+
+		#JIRA-LP-TABLE tr {
+		/* Add a bottom border to all table rows */
+		border-bottom: 1px solid #ddd;
+		}
+
+		#JIRA-LP-TABLE tr.header, #JIRA-LP-TABLE tr:hover {
+		/* Add a grey background color to the table header and on hover */
+		background-color: #f1f1f1;
+		}
+
+		table, th, td {
         border: 1px solid black;
-    }
+		}
+
     </style>
     </head>
     """
@@ -161,6 +215,7 @@ def print_html_report(file):
 
     html_data += "<p>Report generated on {}</p>\n" \
         .format(datetime.datetime.now())
+    html_data += '<input type="text" id="myInput" onkeyup="search()" placeholder="Search ..">'
     html_data += '<table id="JIRA-LP-TABLE">\n'
 
     title = True
