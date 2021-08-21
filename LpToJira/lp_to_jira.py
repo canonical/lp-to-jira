@@ -5,7 +5,6 @@
 
 import sys
 import os
-import json
 
 from optparse import OptionParser
 from datetime import datetime, timedelta
@@ -45,9 +44,8 @@ def get_lp_bug(lp, bug_number):
     bug = None
     try:
         bug = lp.bugs[bug_number]
-    except Exception:
+    except KeyError:
         print("Couldn't find the Launchpad bug {}".format(bug_number))
-        sys.exit(1)
 
     return bug
 
@@ -74,7 +72,7 @@ def get_all_lp_project_bug_tasks(lp, project, days=None):
         lp_project = lp.projects[project]
     except KeyError:
         print("Couldn't find the Launchpad project \"{}\"".format(project))
-        sys.exit(1)
+        return None
 
     created_since = None
 
@@ -257,6 +255,8 @@ Examples:
 
     if opts.sync_project_bugs:
         tasks_list = get_all_lp_project_bug_tasks(lp, opts.sync_project_bugs, opts.days)
+        if tasks_list is None:
+            return 1
 
         for bug_task in tasks_list:
             bug = bug_task.bug
@@ -270,7 +270,10 @@ Examples:
 
     bug_number = args[0]
     project_id = args[1]
+
     bug = get_lp_bug(lp, bug_number)
+    if bug is None:
+        return 1
 
     if opts.exists:
         # We are simply testing if the bug was already in JIRA
