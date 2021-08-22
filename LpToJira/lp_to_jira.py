@@ -42,24 +42,34 @@ def get_lp_bug(lp, bug_number):
     """Make sure the bug ID exists, return bug"""
 
     bug = None
+
+    if lp is None:
+        return bug
+
     try:
         bug = lp.bugs[bug_number]
+
     except KeyError:
         print("Couldn't find the Launchpad bug {}".format(bug_number))
 
     return bug
 
 
-def get_lp_bug_pkg(lp, bug):
-    """From a LP bug, get its package"""
+def get_lp_bug_pkg(bug):
+    """
+    From a LP bug, get its package
+    a Launchpad bug may impact multiple packages,
+    this function is pretty unprecise as it returns only the latest package
+    TODO: probably do something about this, return a list or fail if multiple
+    packages.
+    """
 
     bug_pkg = None
-    if len(bug.bug_tasks) == 1:
-        bug_pkg = bug.bug_tasks[0].bug_target_name.split()[0]
-    else:
-        for task in bug.bug_tasks:
-            if "(Ubuntu)" in task.bug_target_name:
-                bug_pkg = task.bug_target_name.split()[0]
+
+    # Only return bug from Ubuntu
+    for task in bug.bug_tasks:
+        if "(Ubuntu)" in task.bug_target_name:
+            bug_pkg = task.bug_target_name.split()[0]
 
     return bug_pkg
 
@@ -117,7 +127,7 @@ def build_jira_issue(lp, bug, project_id):
     """Builds and return a dict to create a Jira Issue from"""
 
     # Get bug info from LP
-    bug_pkg = get_lp_bug_pkg(lp, bug)
+    bug_pkg = get_lp_bug_pkg(bug)
 
     # Build the Jira Issue from the LP info
     issue_dict = {
