@@ -3,13 +3,15 @@
 # create a new Entry in JIRA in a given project
 
 
-import sys
+import os
 import json
 import datetime
 
 from optparse import OptionParser
 
 from launchpadlib.launchpad import Launchpad
+from launchpadlib.credentials import UnencryptedFileCredentialStore
+
 from jira import JIRA
 from LpToJira.jira_api import jira_api
 
@@ -376,8 +378,17 @@ Examples:
 
     # TODO: catch exception if the Launchpad API isn't open
     # 2. Initialize Launchpad API
-    print("Initialize Launchpad API ...")
-    lp = Launchpad.login_with('foundations', 'production', version='devel')
+    # Connect to Launchpad API
+    # TODO: catch exception if the Launchpad API isn't open
+    snap_home = os.getenv("SNAP_USER_COMMON")
+    if snap_home:
+        credential_store = UnencryptedFileCredentialStore("{}/.lp_creds".format(snap_home))
+    else:
+        credential_store = UnencryptedFileCredentialStore(os.path.expanduser("~/.lp_creds"))
+    lp = Launchpad.login_with(
+        'foundations',
+        'production',
+        version='devel',credential_store=credential_store)
 
     # 3. Create Joint Structure
     # 3.a search for all JIRA issues that starts with LP#
