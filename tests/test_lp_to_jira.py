@@ -1,70 +1,65 @@
 import pytest
 
-from unittest import TestCase
 from unittest.mock import Mock
 
 from LpToJira.lp_to_jira import  get_lp_bug, get_lp_bug_pkg
 
-class test_lp(TestCase):
 
-    def setUp(self):
-        self.lp = Mock()
-        self.bug = Mock()
-        self.bug.title = "test bug"
-        self.bug.id = 123456
-        self.lp.bugs = {123456:self.bug}
+@pytest.fixture
+def lp():
+    bug = Mock()
+    bug.title = "test bug"
+    bug.id = 123456
+    bug.bug_tasks = [
+        Mock(bug_target_name=n, status=s)
+        for n, s in zip(['systemd (Ubuntu)',
+                         'vim (Debian)',
+                         'glibc (Ubuntu)'],
+                        ['New',
+                         'Confirmed',
+                         'New'])
+    ]
 
-        self.task1 = Mock()
-        self.task2 = Mock()
-        self.task3 = Mock()
-        self.task4 = Mock()
-        self.task5 = Mock()
-        self.task6 = Mock()
-        self.task7 = Mock()
-        self.task8 = Mock()
-        self.task9 = Mock()
-        self.task10 = Mock()
-        self.task11 = Mock()
+    return Mock(bugs={123456: bug})
 
-        self.task1.bug_target_name = 'systemd (Ubuntu)'
-        self.task2.bug_target_name = 'vim (Debian)'
-        self.task3.bug_target_name = 'glibc (Ubuntu)'
-        self.task4.bug_target_name = 'glibc (Ubuntu Focal)'
-        self.task5.bug_target_name = 'glibc (Ubuntu None)'
-        self.task6.bug_target_name = 'glibc !@#$)'
-        self.task7.bug_target_name = 'systemd (Ubuntu Focal)'
-        self.task8.bug_target_name = 'systemd (Ubuntu Bionic)'
-        self.task9.bug_target_name = 'glibc (Ubuntu Bionic)'
-        self.task10.bug_target_name = 'casper (Ubuntu)'
-        self.task11.bug_target_name = 'casper (Ubuntu Impish)'
 
-    def tearDown(self):
-        pass
+def test_get_lp_bug(lp):
+    # bad bug id
+    assert get_lp_bug(lp, 1000000000) == None
+    # bad launchpad api
+    assert get_lp_bug(None, 123456) == None
+    # valid bug
+    test_bug = get_lp_bug(lp, 123456)
+    assert test_bug.id == 123456
+    assert test_bug.title == "test bug"
 
-    def test_get_lp_bug(self):
-        # bad bug id
-        self.assertIsNone(get_lp_bug(self.lp, 1000000000))
-        # bad launchpad api
-        self.assertIsNone(get_lp_bug(None, 123456))
-        # valid bug
-        test_bug = get_lp_bug(self.lp, 123456)
-        self.assertEqual(123456, test_bug.id)
-        self.assertEqual("test bug", test_bug.title)
 
-    def test_get_lp_bug_pkg(self):
-        self.bug.bug_tasks = [self.task1]
-        self.assertEqual(get_lp_bug_pkg(self.bug), 'systemd')
+def test_get_lp_bug_pkg():
+    bug = Mock()
+    bug.bug_tasks = [Mock(bug_target_name='systemd (Ubuntu)')]
 
-        self.bug.bug_tasks = [self.task1, self.task3]
-        self.assertEqual(get_lp_bug_pkg(self.bug), 'glibc')
+    assert get_lp_bug_pkg(bug) == 'systemd'
 
-        self.bug.bug_tasks = [self.task10, self.task11]
-        self.assertEqual(get_lp_bug_pkg(self.bug), 'casper')
+    bug = Mock()
+    bug.bug_tasks = [Mock(bug_target_name='systemd (Ubuntu Focal)')]
 
-        self.bug.bug_tasks = [self.task2]
-        self.assertIsNone(get_lp_bug_pkg(self.bug))
+    assert get_lp_bug_pkg(bug) == 'systemd'
 
-    def test_get_all_lp_project_bug_tasks(self):
-        self.assertEqual(0,1)
+    bug = Mock()
+    bug.bug_tasks = [Mock(bug_target_name='glibc !@#$)')]
+
+    assert get_lp_bug_pkg(bug) == None
+
+    bug = Mock()
+    bug.bug_tasks = [Mock(bug_target_name='systemd (Debian)')]
+
+    assert get_lp_bug_pkg(bug) == None
+
+    bug = Mock()
+    bug.bug_tasks = [
+        Mock(bug_target_name=n)
+        for n in ['systemd (Ubuntu)', 'glibc (Ubuntu)']]
+
+    assert get_lp_bug_pkg(bug) == 'glibc'
 
 # =============================================================================
