@@ -2,25 +2,9 @@ import pytest
 
 from unittest.mock import Mock
 
-from LpToJira.lp_to_jira import  get_lp_bug, get_lp_bug_pkg
+from LpToJira.lp_to_jira import\
+    get_lp_bug, get_lp_bug_pkg, get_all_lp_project_bug_tasks
 
-
-@pytest.fixture
-def lp():
-    bug = Mock()
-    bug.title = "test bug"
-    bug.id = 123456
-    bug.bug_tasks = [
-        Mock(bug_target_name=n, status=s)
-        for n, s in zip(['systemd (Ubuntu)',
-                         'vim (Debian)',
-                         'glibc (Ubuntu)'],
-                        ['New',
-                         'Confirmed',
-                         'New'])
-    ]
-
-    return Mock(bugs={123456: bug})
 
 
 def test_get_lp_bug(lp):
@@ -61,5 +45,20 @@ def test_get_lp_bug_pkg():
         for n in ['systemd (Ubuntu)', 'glibc (Ubuntu)']]
 
     assert get_lp_bug_pkg(bug) == 'glibc'
+
+
+def test_get_lp_project_bug_tasks(lp):
+# Very light testing of what the function could do
+# 100% coverage but not necessarly 100% coverage :)
+# TODO: test more date's options
+# TODO: test various status filters
+
+    assert get_all_lp_project_bug_tasks(lp, "badproject") == None
+
+    # project subiquity exists has no bug
+    assert get_all_lp_project_bug_tasks(lp, "subiquity") == None
+
+    # project curtin exists and has a bug
+    assert get_all_lp_project_bug_tasks(lp, "curtin", 5).id == 123456
 
 # =============================================================================
