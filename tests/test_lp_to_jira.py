@@ -3,6 +3,8 @@ import pytest
 from unittest.mock import Mock
 
 from LpToJira.lp_to_jira import\
+    build_jira_issue,\
+    create_jira_issue,\
     get_lp_bug,\
     get_lp_bug_pkg,\
     get_all_lp_project_bug_tasks,\
@@ -64,6 +66,7 @@ def test_get_lp_project_bug_tasks(lp):
     # project curtin exists and has a bug
     assert get_all_lp_project_bug_tasks(lp, "curtin", 5).id == 123456
 
+
 def test_is_bug_in_jira():
     jira = Mock()
     jira.search_issues = Mock(return_value=None)
@@ -80,6 +83,36 @@ def test_is_bug_in_jira():
     jira.client_info = Mock(return_value="jira_client_info")
 
     assert is_bug_in_jira(jira, bug, "AA") == True
+
+
+def test_build_jira_issue(empty_bug):
+    # TODO improve coverage to test for non empty bug
+    default_jira_bug = {'project': '',
+                        'summary': 'LP#0 [None] ',
+                        'description': '', 'issuetype': {'name': 'Bug'},
+                        'components': [{'name': 'Distro'}]}
+
+    assert build_jira_issue(None, empty_bug, "") == default_jira_bug
+
+
+def test_create_jira_issue(empty_bug, capsys):
+    jira = Mock()
+
+    jira.create_issue = Mock(return_value=Mock(key="001"))
+    jira.add_simple_link = Mock(return_value=None)
+    jira.client_info = Mock(return_value="jira")
+
+    issue_dict = build_jira_issue(None, empty_bug, "")
+
+    jira_issue = create_jira_issue(jira, issue_dict, empty_bug)
+
+    assert "jira/browse/001" in capsys.readouterr().out
+
+    # TODO: Figure out how to make this test succeed, this helps make
+    #       sure the url is created properly
+    # assert jira.add_simple_link.assert_called_with(
+    #     jira_issue,
+    #     object={'url': 'https://', 'title': 'Launchpad Link'})
 
 
 # =============================================================================

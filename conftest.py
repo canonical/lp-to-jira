@@ -3,6 +3,17 @@ import pytest
 from unittest.mock import Mock
 
 @pytest.fixture
+def empty_bug():
+    bug = Mock()
+    bug.title = ""
+    bug.description = ""
+    bug.id = 0
+    bug.web_link = "https://"
+    bug.bug_tasks = []
+
+    return bug
+
+@pytest.fixture
 def lp():
     bug = Mock()
     bug.title = "test bug"
