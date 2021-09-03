@@ -8,8 +8,8 @@ from LpToJira.lp_to_jira import\
     get_lp_bug,\
     get_lp_bug_pkg,\
     get_all_lp_project_bug_tasks,\
-    is_bug_in_jira
-
+    is_bug_in_jira,\
+    lp_to_jira_bug
 
 
 def test_get_lp_bug(lp):
@@ -113,6 +113,28 @@ def test_create_jira_issue(empty_bug, capsys):
     # assert jira.add_simple_link.assert_called_with(
     #     jira_issue,
     #     object={'url': 'https://', 'title': 'Launchpad Link'})
+
+
+def test_lp_to_jira_bug(lp, empty_bug):
+    jira = Mock()
+
+    jira_issue = [Mock(key="key")]
+    jira.search_issues = Mock(return_value=jira_issue)
+    jira.client_info = Mock(return_value="jira")
+
+    lp_to_jira_bug(lp, jira, empty_bug, "AA", [''])
+
+    jira.search_issues = Mock(return_value=None)
+
+    opts = Mock()
+    opts.label = ""
+    lp_to_jira_bug(lp, jira, empty_bug, "AA", opts)
+
+    opts.label = "label"
+    lp_to_jira_bug(lp, jira, empty_bug, "AA", opts)
+
+    opts.no_lp_tag = False
+    lp_to_jira_bug(lp, jira, empty_bug, "AA", opts)
 
 
 # =============================================================================

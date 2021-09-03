@@ -8,6 +8,7 @@ def empty_bug():
     bug.title = ""
     bug.description = ""
     bug.id = 0
+    bug.tags = []
     bug.web_link = "https://"
     bug.bug_tasks = []
 
