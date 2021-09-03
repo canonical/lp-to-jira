@@ -3,10 +3,10 @@
 # create a new Entry in JIRA in a given project
 
 
-import sys
 import os
+import argparse
+import textwrap
 
-from optparse import OptionParser
 from datetime import datetime, timedelta
 
 from launchpadlib.launchpad import Launchpad
@@ -179,107 +179,109 @@ def lp_to_jira_bug(lp, jira, bug, project_id, opts):
         bug.lp_save()
 
 
-def main():
-    usage = """\
-usage: lp-to-jira [options] bug-id project-id
-
-Create JIRA entry for a given Launchpad bug ID
-
-options:
-    -e, --exists"
-                Look if the Launchpad Bug has alreaady been imported
-                print the JIRA issue ID if found
-    -l, --label LABEL
-                Add LABEL to the JIRA issue after creation
-    -s SYNC_PROJECT_BUGS, --sync_project_bugs=SYNC_PROJECT_BUGS
-                The name of the LP Project. This will bring in every
-                bug from your project if you do not also specify days
-    -d DAYS, --days=DAYS
-                Only look for LP Bugs in the past n days
-    --no-lp-tag
-
-Examples:
-    lp-to-jira 3215487 FR
-    lp-to-jira -e 3215487 FR
-    lp-to-jira -l ubuntu-meeting 3215487 PR
-    lp-to-jira -s ubuntu -d 3 IQA
-"""
-
-    opt_parser = OptionParser(usage)
-    opt_parser.add_option(
-        '-l', '--label',
-        dest='label',
+def main(args=None):
+    opt_parser = argparse.ArgumentParser(
+        description="A script create JIRA issue from Launchpad bugs",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=textwrap.dedent('''\
+        Examples:
+            lp-to-jira 3215487 FR
+            lp-to-jira -e 3215487 FR
+            lp-to-jira -l ubuntu-meeting 3215487 PR
+            lp-to-jira -s ubuntu -d 3 IQA
+        ''')
     )
-    opt_parser.add_option(
+    opt_parser.add_argument(
+        'bug', type=int,
+        # Somewhat hacky way to allow -s option to not require bug id
+        # -s (sync) is an optional parameter that doesn't require bug id
+        default=0,
+        nargs='?',
+        help="The Launchpad numeric bug ID")
+    opt_parser.add_argument(
+        'project', type=str,
+        help="The JIRA project string key")
+    opt_parser.add_argument(
+        '-l',
+        '--label',
+        dest='label',
+        help='Add LABEL to the JIRA issue after creation')
+    opt_parser.add_argument(
         '-e', '--exists',
         dest='exists',
-        action='store_true'
+        action='store_true',
+        help=textwrap.dedent('''
+            Look if the Launchpad Bug has alreaady been imported
+            print the JIRA issue ID if found
+        ''')
     )
-
-    opt_parser.add_option(
+    opt_parser.add_argument(
         '-s', '--sync_project_bugs',
         dest='sync_project_bugs',
         action='store',
         type=str,
-        help='Adds all bugs from a specified LP Project to specified Jira board'
-            ' if they are not already on the Jira board.'
-            ' Use --days to narrow down bugs'
+        help=textwrap.dedent('''
+            Adds all bugs from a specified LP Project to specified Jira board
+            if they are not already on the Jira board.
+            Use --days to narrow down bugs
+            ''')
     )
-
-    opt_parser.add_option(
+    opt_parser.add_argument(
         '-d', '--days',
         dest='days',
         action='store',
         type=int,
         help='Only look for LP Bugs in the past n days'
     )
-
-    opt_parser.add_option(
+    opt_parser.add_argument(
         '--no-lp-tag',
         dest='no_lp_tag',
         action='store_true',
         help='Do not add tag to LP Bug'
     )
 
-    opts, args = opt_parser.parse_args()
+    opts = opt_parser.parse_args(args)
+
+    if (opts.bug == 0 and not opts.sync_project_bugs):
+        opt_parser.print_usage()
+        print('lp-to-jira: error: the follow argument is required: bug')
+        return 1
 
     # Connect to Launchpad API
     # TODO: catch exception if the Launchpad API isn't open
     snap_home = os.getenv("SNAP_USER_COMMON")
     if snap_home:
-        credential_store = UnencryptedFileCredentialStore("{}/.lp_creds".format(snap_home))
+        credential_store = UnencryptedFileCredentialStore(
+            "{}/.lp_creds".format(snap_home))
     else:
-        credential_store = UnencryptedFileCredentialStore(os.path.expanduser("~/.lp_creds"))
+        credential_store = UnencryptedFileCredentialStore(
+            os.path.expanduser("~/.lp_creds"))
     lp = Launchpad.login_with(
         'foundations',
         'production',
-        version='devel',credential_store=credential_store)
+        version='devel', credential_store=credential_store)
 
     # Connect to the JIRA API
     try:
         api = jira_api()
-    except ValueError as exc:
+    except ValueError:
         return "ERROR: Cannot initialize JIRA API."
 
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
 
     if opts.sync_project_bugs:
-        tasks_list = get_all_lp_project_bug_tasks(lp, opts.sync_project_bugs, opts.days)
+        tasks_list = get_all_lp_project_bug_tasks(
+            lp, opts.sync_project_bugs, opts.days)
         if tasks_list is None:
             return 1
 
         for bug_task in tasks_list:
             bug = bug_task.bug
-            lp_to_jira_bug(lp, jira, bug, args[0], opts)
+            lp_to_jira_bug(lp, jira, bug, opts.project, opts)
         return 0
 
-    # Make sure there's 2 arguments
-    if len(args) < 2:
-        opt_parser.print_usage()
-        return 1
-
-    bug_number = args[0]
-    project_id = args[1]
+    bug_number = opts.bug
+    project_id = opts.project
 
     bug = get_lp_bug(lp, bug_number)
     if bug is None:
