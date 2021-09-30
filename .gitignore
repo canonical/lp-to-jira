@@ -1,0 +1,10 @@
+# Ignore CPython artefacts
+__pycache__/
+*.pyc
+
+# Ignore test artefacts
+.coverage
+.pytest_cache/
+
+# Ignore pip artefacts
+*.egg-info/
