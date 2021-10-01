@@ -7,7 +7,8 @@ import os
 import json
 import datetime
 
-from optparse import OptionParser
+import argparse
+import textwrap
 
 from launchpadlib.launchpad import Launchpad
 from launchpadlib.credentials import UnencryptedFileCredentialStore
@@ -323,52 +324,43 @@ def get_bug_id(summary):
     return id
 
 
-def main():
+def main(args=None):
     global jira_server
 
-    usage = """\
-usage: lp-to-jira-report [options] project-id
+    opt_parser = argparse.ArgumentParser(
+            description="Report the status of all active LaunchPad bug "\
+                "imported into a JIRA project with lp-to-jira",
+            formatter_class=argparse.RawTextHelpFormatter,
+            epilog=textwrap.dedent('''\
+            Examples:
+                lp-to-jira-report FR
+                lp-to-jira-report --csv  results.csv  FR
+                lp-to-jira-report --json results.json FR
+                lp-to-jira-report --html results.html FR
+            ''')
+        )
+    opt_parser.add_argument(
+        'project', type=str,
+        help="The JIRA project string key")
 
-Report the status of all active LaunchPad bug imported
-into a JIRA project with lp-to-jira
-
-options:
-    --csv FILE
-        export the results of the report into FILE in csv format
-    --html FILE
-        export the results of the report into FILE in html format
-    --json FILE
-        export the results of the report into FILE in json format
-    default:
-        display the report on stdout
-
-Examples:
-    lp-to-jira-report FR
-    lp-to-jira-report --csv  results.csv  FR
-    lp-to-jira-report --json results.json FR
-    lp-to-jira-report --html results.html FR
-    """
-    opt_parser = OptionParser(usage)
-    opt_parser.add_option(
+    opt_parser.add_argument(
         '--csv',
         dest='csv',
+        help='export the results of the report into FILE in csv format',
     )
-    opt_parser.add_option(
+    opt_parser.add_argument(
         '--html',
         dest='html',
+        help='export the results of the report into FILE in html format',
     )
-    opt_parser.add_option(
+    opt_parser.add_argument(
         '--json',
         dest='json',
+        help='export the results of the report into FILE in json format',
     )
-    opts, args = opt_parser.parse_args()
+    opts = opt_parser.parse_args(args)
 
-    # Make sure there's at least 1 arguments
-    if len(args) < 1:
-        opt_parser.print_usage()
-        return 1
-
-    jira_project = args[0]
+    jira_project = opts.project
 
     # 1. Initialize JIRA API
     print("Initialize JIRA API ...")
