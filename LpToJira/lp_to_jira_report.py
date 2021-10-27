@@ -175,7 +175,7 @@ def java_script():
     return script
 
 
-def print_html_report(file):
+def print_html_report(db, file):
     html_data = """\
     <!DOCTYPE html>
     <html><title>Foundations JIRA / Launchpad status</title>
@@ -222,7 +222,7 @@ def print_html_report(file):
     html_data += '<table id="JIRA-LP-TABLE">\n'
 
     title = True
-    for entry in jira_lp_db:
+    for entry in db:
         if title:
             headers = entry.keys()
             line = ""
@@ -324,6 +324,182 @@ def get_bug_id(summary):
     return id
 
 
+def find_issues_in_project(api, project):
+    if not api or not project:
+        return []
+
+    # Get JIRA issues in batch of 50
+    issue_index = 0
+    issue_batch = 50
+
+    found_issues = []
+
+    while True:
+        start_index = issue_index * issue_batch
+        request = "project = {} " \
+            "AND summary ~ \"LP#\" " \
+            "AND status in (BLOCKED, Backlog, \"In Progress\", " \
+            "REVIEW,\"Selected for Development\")""".format(project)
+        issues = api.search_issues(request, startAt=start_index)
+
+        if not issues:
+            break
+
+        issue_index += 1
+
+        # For each issue in JIRA with LP# in the title
+        for issue in issues:
+            summary = issue.fields.summary
+            if "LP#" not in summary:
+                continue
+
+            lpbug_id = get_bug_id(summary)
+            entry = {
+                'JIRA ID': issue.key,
+                'Summary': summary,
+                'Status': issue.fields.status.name,
+                'LaunchPad ID': lpbug_id,
+                'Heat': '',
+                'Importance': '',
+                'Packages': '',
+                "Devel": '',
+                "Hirsute": '',
+                "Focal": '',
+                "Bionic": '',
+                "Xenial": '',
+                "Trusty": ''
+            }
+            found_issues.append(entry)
+
+    return found_issues
+
+
+def sync_title(issue, jira, lp):
+    if not issue or not jira or not lp:
+        return False
+
+    jira_key = issue['JIRA ID']
+    lp_id = issue['LaunchPad ID']
+    lp_summary = lp.bugs[int(lp_id)].title
+
+    jira_issue = jira.issue(issue["JIRA ID"])
+
+    # TODO: smarter formatting with regexp or something
+    summary = issue['Summary']
+    if "[" in summary:
+        head, tail = summary[:summary.index("]")+1],\
+            summary[summary.index("]")+2:]
+        if tail != lp_summary:
+            new_summary = head + " " + lp_summary
+            print("\n[Title Sync] - Updating {} summary to {}".format(jira_key, new_summary))
+
+            comment = ('{{jira-bot}} Fixed out of sync title with LP: #%s') % (lp_id)
+            issue['Summary'] = new_summary
+            jira.add_comment(jira_issue, comment)
+            jira_issue.update(summary=new_summary)
+
+            return True
+    else:
+        print("\n[Title Sync] - Skipping title sync for {} Bad Formating".format(jira_key))
+
+    return False
+
+
+def sync_release(issue, jira):
+    if not issue or not jira:
+        return False
+
+    jira_key = issue['JIRA ID']
+    lp_id = issue['LaunchPad ID']
+
+    jira_issue = jira.issue(issue["JIRA ID"])
+
+    # automation 1: check for release status over all series and move the
+    # to Done if they are all Fix Released or Won't Fix
+    released = False
+    statuses = [issue[x] for x in issue.keys()][list(issue.keys()).index("Devel"):]
+
+    # Need some non empty statuses
+    if statuses.count('') != len(statuses):
+        for status in statuses:
+            if status in ["Fix Released", ""]:
+                released = True
+            else:
+                released = False
+                break
+
+        if released:
+            if jira_issue.fields.status.name != 'Done':
+                print("\n[Status Sync] - Updating {} status to Done per LP: #{}".format(jira_key, lp_id))
+
+                comment = ('{{jira-bot}} Since all affected series of '
+                        'the related LP: #%s are *Fix Released,* '
+                        'moving this issue to '
+                        '{color:#36B37E}*DONE*{color}') % (lp_id)
+
+            jira.add_comment(jira_issue, comment)
+            jira.transition_issue(jira_issue, transition='Done')
+            return True
+    return False
+
+
+def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
+    if not lp or not jira or not issues:
+        return []
+
+    for issue in list(issues):
+        print("#", flush=True, end='')
+        lpbug_importance = ""
+        lpbug_devel = ""
+        lpbug_hirsute = ""
+        lpbug_focal = ""
+        lpbug_bionic = ""
+        lpbug_xenial = ""
+        lpbug_trusty = ""
+
+        try:
+            lpbug = lp.bugs[int(issue['LaunchPad ID'])]
+            list_pkg = [x.bug_target_name.split()[0]
+                        for x in lpbug.bug_tasks
+                        if "(Ubuntu)" in x.bug_target_name]
+            bug_pkg = ", ".join(list_pkg)
+
+            if len(list_pkg) == 1:
+                lpbug_importance = list(importance_color.keys())[min([list(importance_color.keys()).index(x.importance) for x in lpbug.bug_tasks])]
+                lpbug_devel = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name])
+                lpbug_hirsute = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Hirsute)" in x.bug_target_name])
+                lpbug_focal = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Focal)" in x.bug_target_name])
+                lpbug_bionic = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Bionic)" in x.bug_target_name])
+                lpbug_xenial = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Xenial)" in x.bug_target_name])
+                lpbug_trusty = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Trusty)" in x.bug_target_name])
+
+                issue['Heat'] = str(lpbug.heat)
+                issue['Importance'] = lpbug_importance
+                issue['Packages'] = bug_pkg
+                issue["Devel"] = lpbug_devel
+                issue["Hirsute"] = lpbug_hirsute
+                issue["Focal"] = lpbug_focal
+                issue["Bionic"] = lpbug_bionic
+                issue["Xenial"] = lpbug_xenial
+                issue["Trusty"] = lpbug_trusty
+
+                if sync:
+                    jira_key = issue["JIRA ID"]
+                    jira_issue = jira.issue(jira_key)
+                    if "DisableLPSync" in jira_issue.fields.labels:
+                        print("\n[Sync]- Disabled by user for {}".format(jira_key))
+                        continue
+
+                    sync_title(issue, jira, lp)
+                    if sync_release(issue, jira):
+                        # Must remove the element as it is released
+                        issues.remove(issue)
+
+        except Exception:
+            print("\nCouldn't find the Launchpad bug {}".format(lpbug.id))
+    print()
+
+
 def main(args=None):
     global jira_server
 
@@ -358,12 +534,17 @@ def main(args=None):
         dest='json',
         help='export the results of the report into FILE in json format',
     )
+    opt_parser.add_argument(
+        '--sync',
+        dest='sync',action='store_true',
+        help='Sync JIRA items with corresponding bugs in LP',
+    )
+
     opts = opt_parser.parse_args(args)
 
     jira_project = opts.project
 
     # 1. Initialize JIRA API
-    print("Initialize JIRA API ...")
     api = jira_api()
     jira_server = api.server
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
@@ -382,95 +563,17 @@ def main(args=None):
         'production',
         version='devel',credential_store=credential_store)
 
-    # 3. Create Joint Structure
-    # 3.a search for all JIRA issues that starts with LP#
-    print("Searching for JIRA issues ...", flush=True)
-    # Get JIRA issues in batch of 50
-    num_issues = 0
-    issue_index = 0
-    issue_batch = 50
+    print("Searching for JIRA issues in project %s imported with lp-to-jira..."\
+        % opts.project, flush=True)
 
-    while True:
-        start_index = issue_index * issue_batch
-        request = "project = {} " \
-            "AND summary ~ \"LP#\" " \
-            "AND status in (BLOCKED, Backlog, \"In Progress\", " \
-            "REVIEW,\"Selected for Development\")""".format(jira_project)
-        issues = jira.search_issues(request, startAt=start_index)
+    # Create a Database of all JIRA issues imported by lp-to-jira
+    jira_lp_db = find_issues_in_project(jira, jira_project)
+    print("Found %s issues" % len(jira_lp_db))
 
-        if not issues:
-            break
+    # For each issue retrieve latest lp data and sync if required
+    merge_lp_data_with_jira_issues(jira, lp, jira_lp_db, opts.sync)
 
-        issue_index += 1
-        # For each issue in JIRA with LP# in the title
-        for issue in issues:
-            summary = issue.fields.summary
-            if "LP#" in summary:
-                num_issues += 1
-                print("#", flush=True, end="")
-
-                lpbug_id = get_bug_id(summary)
-                lpbug_importance = ""
-                lpbug_devel = ""
-                lpbug_hirsute = ""
-                lpbug_focal = ""
-                lpbug_bionic = ""
-                lpbug_xenial = ""
-                lpbug_trusty = ""
-
-                try:
-                    lpbug = lp.bugs[int(lpbug_id)]
-
-                    list_pkg = [x.bug_target_name.split()[0]
-                                for x in lpbug.bug_tasks
-                                if "(Ubuntu)" in x.bug_target_name]
-                    bug_pkg = ", ".join(list_pkg)
-                    if len(list_pkg) == 1:
-                        lpbug_importance = list(importance_color.keys())[min([list(importance_color.keys()).index(x.importance) for x in lpbug.bug_tasks])]
-                        lpbug_devel = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name])
-                        lpbug_hirsute = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Hirsute)" in x.bug_target_name])
-                        lpbug_focal = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Focal)" in x.bug_target_name])
-                        lpbug_bionic = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Bionic)" in x.bug_target_name])
-                        lpbug_xenial = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Xenial)" in x.bug_target_name])
-                        lpbug_trusty = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Trusty)" in x.bug_target_name])
-
-                    jira_lp_db.append({
-                        'JIRA ID': issue.key,
-                        'Summary': summary,
-                        'Status': issue.fields.status.name,
-                        'LaunchPad ID': lpbug_id,
-                        'Heat': str(lpbug.heat),
-                        'Importance': lpbug_importance,
-                        'Packages': bug_pkg,
-                        "Devel": lpbug_devel,
-                        "Hirsute": lpbug_hirsute,
-                        "Focal": lpbug_focal,
-                        "Bionic": lpbug_bionic,
-                        "Xenial": lpbug_xenial,
-                        "Trusty": lpbug_trusty
-                    })
-
-                except Exception:
-                    print("\nCouldn't find the Launchpad bug {}".format(lpbug_id))
-                    jira_lp_db.append({
-                        'JIRA ID': issue.key,
-                        'Summary': summary,
-                        'Status': issue.fields.status.name,
-                        'LaunchPad ID': "N/A",
-                        'Heat': "N/A",
-                        'Importance': "N/A",
-                        'Packages': "N/A",
-                        "Devel": "N/A",
-                        "Hirsute": "N/A",
-                        "Focal": "N/A",
-                        "Bionic": "N/A",
-                        "Xenial": "N/A",
-                        "Trusty": "N/A"
-                    })
-
-    print("\nFound %s issues" % len(jira_lp_db))
-
-    # Create a table version of the
+    # Create a table version of the database
     jira_lp_db_table = []
     if jira_lp_db:
         jira_lp_db_table.append(list(jira_lp_db[0].keys()))
@@ -485,7 +588,7 @@ def main(args=None):
         print("JSON report saved as %s" % opts.json)
 
     if opts.html:
-        print_html_report(opts.html)
+        print_html_report(jira_lp_db, opts.html)
         print("HTML report saved as %s" % opts.html)
 
     if opts.csv:
