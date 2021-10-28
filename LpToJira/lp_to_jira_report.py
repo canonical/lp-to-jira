@@ -26,6 +26,7 @@ jira = None
 api = None
 
 series = ["Devel",
+          "Impish",
           "Hirsute",
           "Focal",
           "Bionic",
@@ -363,6 +364,7 @@ def find_issues_in_project(api, project):
                 'Importance': '',
                 'Packages': '',
                 "Devel": '',
+                "Impish":'',
                 "Hirsute": '',
                 "Focal": '',
                 "Bionic": '',
@@ -451,6 +453,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
         print("#", flush=True, end='')
         lpbug_importance = ""
         lpbug_devel = ""
+        lpbug_impish = ""
         lpbug_hirsute = ""
         lpbug_focal = ""
         lpbug_bionic = ""
@@ -467,6 +470,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
             if len(list_pkg) == 1:
                 lpbug_importance = list(importance_color.keys())[min([list(importance_color.keys()).index(x.importance) for x in lpbug.bug_tasks])]
                 lpbug_devel = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name])
+                lpbug_impish = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Impish])" in x.bug_target_name])
                 lpbug_hirsute = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Hirsute)" in x.bug_target_name])
                 lpbug_focal = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Focal)" in x.bug_target_name])
                 lpbug_bionic = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Bionic)" in x.bug_target_name])
@@ -477,6 +481,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
                 issue['Importance'] = lpbug_importance
                 issue['Packages'] = bug_pkg
                 issue["Devel"] = lpbug_devel
+                issue["Impish"] = lpbug_impish
                 issue["Hirsute"] = lpbug_hirsute
                 issue["Focal"] = lpbug_focal
                 issue["Bionic"] = lpbug_bionic

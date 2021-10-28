@@ -55,6 +55,7 @@ def issue():
                 'Importance': '',
                 'Packages': '',
                 "Devel": '',
+                "Impish": '',
                 "Hirsute": '',
                 "Focal": '',
                 "Bionic": '',
