@@ -65,3 +65,14 @@ Examples:
     lp-to-jira-report --html results.html FR
 ```
 
+## Sync while getting a report
+```
+usage: lp-to-jira-report [options] --sync project-id
+```
+
+This will perform the same as lp-to-jira-report except that will also sync
+some fata from Launchpad back into your JIRA issues
+
+- Title Sync: If the Launchpad Item title changed, the JIRA issues summary will be updated
+- Rekease Status: If all the series impacted in Launchpad are Fix Release, the JIRA issue will automatically be moved to DONE
+- It is possible to disable automation on the JIRA issue by creating a Label called DisableLPSync
