@@ -2,6 +2,7 @@ import pytest
 
 from unittest.mock import Mock
 
+
 @pytest.fixture
 def empty_bug():
     bug = Mock()
@@ -13,6 +14,7 @@ def empty_bug():
     bug.bug_tasks = []
 
     return bug
+
 
 @pytest.fixture
 def lp():
@@ -35,7 +37,10 @@ def lp():
     project2 = Mock()
     project2.searchTasks = Mock(return_value=bug)
 
-    return Mock(bugs={123456: bug}, projects={"subiquity": project1, "curtin": project2})
+    return Mock(
+        bugs={123456: bug},
+        projects={"subiquity": project1, "curtin": project2})
+
 
 @pytest.fixture
 def jira():
@@ -43,6 +48,7 @@ def jira():
     api.search_issues = Mock(return_value=None)
 
     return api
+
 
 @pytest.fixture
 def issue():

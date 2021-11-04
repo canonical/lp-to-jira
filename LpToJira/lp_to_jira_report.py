@@ -72,33 +72,34 @@ def java_script():
     script = """\
     <script>
     function search() {
-		// Declare variables
-		var input, filter, table, lines, line, value, show, i, txtValue;
-		input = document.getElementById("myInput");
-		filter = input.value.toUpperCase();
-		table = document.getElementById("JIRA-LP-TABLE");
-		lines = table.getElementsByTagName("TR");
+        // Declare variables
+        var input, filter, table, lines, line, value, show, i, txtValue;
+        input = document.getElementById("myInput");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("JIRA-LP-TABLE");
+        lines = table.getElementsByTagName("TR");
 
-		// Loop through all table rows, and hide those who don't match the search query
-		for (i = 1; i < lines.length; i++) {
-			line = lines[i].getElementsByTagName("TD");
-			show = false;
-			for (j = 0; j < line.length; j++) {
-				value = line[j];
-				if (value) {
-					txtValue = value.textContent || value.innerText;
-					if (txtValue.toUpperCase().indexOf(filter) > -1) {
-						show = true;
-						break;
-					}
-				}
-			}
-			if(show)
-				lines[i].style.display = "";
-			else
-				lines[i].style.display = "none";
-		}
-	}
+        // Loop through all table rows, and hide those who don't match
+        // the search query
+        for (i = 1; i < lines.length; i++) {
+            line = lines[i].getElementsByTagName("TD");
+            show = false;
+            for (j = 0; j < line.length; j++) {
+                value = line[j];
+                if (value) {
+                    txtValue = value.textContent || value.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        show = true;
+                        break;
+                    }
+                }
+            }
+            if(show)
+                lines[i].style.display = "";
+            else
+                lines[i].style.display = "none";
+        }
+    }
 
     function sortTable(n,numerical) {
         var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount=0;
@@ -182,33 +183,33 @@ def print_html_report(db, file):
     <html><title>Foundations JIRA / Launchpad status</title>
     <head>
     <style>
-		#myInput {
-		background-position: 10px 12px; /* Position the search icon */
-		background-repeat: no-repeat; /* Do not repeat the icon image */
-		width: 100%; /* Full-width */
-		font-size: 14px; /* Increase font-size */
-		padding: 12px 20px 12px 40px; /* Add some padding */
-		border: 1px solid #ddd; /* Add a grey border */
-		margin-bottom: 12px; /* Add some space below the input */
-		}
+        #myInput {
+        background-position: 10px 12px; /* Position the search icon */
+        background-repeat: no-repeat; /* Do not repeat the icon image */
+        width: 100%; /* Full-width */
+        font-size: 14px; /* Increase font-size */
+        padding: 12px 20px 12px 40px; /* Add some padding */
+        border: 1px solid #ddd; /* Add a grey border */
+        margin-bottom: 12px; /* Add some space below the input */
+        }
 
-		#JIRA-LP-TABLE th, #JIRA-LP-TABLE td {
-		text-align: left; /* Left-align text */
-		}
+        #JIRA-LP-TABLE th, #JIRA-LP-TABLE td {
+        text-align: left; /* Left-align text */
+        }
 
-		#JIRA-LP-TABLE tr {
-		/* Add a bottom border to all table rows */
-		border-bottom: 1px solid #ddd;
-		}
+        #JIRA-LP-TABLE tr {
+        /* Add a bottom border to all table rows */
+        border-bottom: 1px solid #ddd;
+        }
 
-		#JIRA-LP-TABLE tr.header, #JIRA-LP-TABLE tr:hover {
-		/* Add a grey background color to the table header and on hover */
-		background-color: #f1f1f1;
-		}
+        #JIRA-LP-TABLE tr.header, #JIRA-LP-TABLE tr:hover {
+        /* Add a grey background color to the table header and on hover */
+        background-color: #f1f1f1;
+        }
 
-		table, th, td {
+        table, th, td {
         border: 1px solid black;
-		}
+        }
 
     </style>
     </head>
@@ -219,7 +220,8 @@ def print_html_report(db, file):
 
     html_data += "<p>Report generated on {}</p>\n" \
         .format(datetime.datetime.now())
-    html_data += '<input type="text" id="myInput" onkeyup="search()" placeholder="Search ..">'
+    html_data += '<input type="text" id="myInput" onkeyup="search()" '\
+                 'placeholder="Search ..">'
     html_data += '<table id="JIRA-LP-TABLE">\n'
 
     title = True
@@ -364,7 +366,7 @@ def find_issues_in_project(api, project):
                 'Importance': '',
                 'Packages': '',
                 "Devel": '',
-                "Impish":'',
+                "Impish": '',
                 "Hirsute": '',
                 "Focal": '',
                 "Bionic": '',
@@ -393,16 +395,20 @@ def sync_title(issue, jira, lp):
             summary[summary.index("]")+2:]
         if tail != lp_summary:
             new_summary = head + " " + lp_summary
-            print("\n[Title Sync] - Updating {} summary to {}".format(jira_key, new_summary))
+            print("\n[Title Sync] - Updating {} summary to {}"
+                  .format(jira_key, new_summary))
 
-            comment = ('{{jira-bot}} Fixed out of sync title with LP: #%s') % (lp_id)
             issue['Summary'] = new_summary
-            jira.add_comment(jira_issue, comment)
+            jira.add_comment(
+                jira_issue,
+                ('{{jira-bot}} Fixed out of sync title with LP: #%s') % (lp_id)
+                )
             jira_issue.update(summary=new_summary)
 
             return True
     else:
-        print("\n[Title Sync] - Skipping title sync for {} Bad Formating".format(jira_key))
+        print(("\n[Title Sync] - Skipping title "
+               "sync for {} Bad Formating").format(jira_key))
 
     return False
 
@@ -419,7 +425,8 @@ def sync_release(issue, jira):
     # automation 1: check for release status over all series and move the
     # to Done if they are all Fix Released or Won't Fix
     released = False
-    statuses = [issue[x] for x in issue.keys()][list(issue.keys()).index("Devel"):]
+    statuses = [issue[x] for x in issue.keys()][
+        list(issue.keys()).index("Devel"):]
 
     # Need some non empty statuses
     if statuses.count('') != len(statuses):
@@ -432,12 +439,13 @@ def sync_release(issue, jira):
 
         if released:
             if jira_issue.fields.status.name != 'Done':
-                print("\n[Status Sync] - Updating {} status to Done per LP: #{}".format(jira_key, lp_id))
+                print(("\n[Status Sync] - Updating {} "
+                       "status to Done per LP: #{}").format(jira_key, lp_id))
 
                 comment = ('{{jira-bot}} Since all affected series of '
-                        'the related LP: #%s are *Fix Released,* '
-                        'moving this issue to '
-                        '{color:#36B37E}*DONE*{color}') % (lp_id)
+                           'the related LP: #%s are *Fix Released,* '
+                           'moving this issue to '
+                           '{color:#36B37E}*DONE*{color}') % (lp_id)
 
             jira.add_comment(jira_issue, comment)
             jira.transition_issue(jira_issue, transition='Done')
@@ -468,14 +476,31 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
             bug_pkg = ", ".join(list_pkg)
 
             if len(list_pkg) == 1:
-                lpbug_importance = list(importance_color.keys())[min([list(importance_color.keys()).index(x.importance) for x in lpbug.bug_tasks])]
-                lpbug_devel = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu)" in x.bug_target_name])
-                lpbug_impish = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Impish])" in x.bug_target_name])
-                lpbug_hirsute = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Hirsute)" in x.bug_target_name])
-                lpbug_focal = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Focal)" in x.bug_target_name])
-                lpbug_bionic = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Bionic)" in x.bug_target_name])
-                lpbug_xenial = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Xenial)" in x.bug_target_name])
-                lpbug_trusty = "".join([x.status for x in lpbug.bug_tasks if "(Ubuntu Trusty)" in x.bug_target_name])
+                lpbug_importance = list(
+                    importance_color.keys())[min([list(
+                        importance_color.keys()).index(x.importance)
+                            for x in lpbug.bug_tasks])]
+                lpbug_devel = "".join(
+                    [x.status for x in lpbug.bug_tasks
+                        if "(Ubuntu)" in x.bug_target_name])
+                lpbug_impish = "".join(
+                    [x.status for x in lpbug.bug_tasks
+                        if "(Ubuntu Impish])" in x.bug_target_name])
+                lpbug_hirsute = "".join(
+                    [x.status for x in lpbug.bug_tasks
+                        if "(Ubuntu Hirsute)" in x.bug_target_name])
+                lpbug_focal = "".join(
+                    [x.status for x in lpbug.bug_tasks
+                        if "(Ubuntu Focal)" in x.bug_target_name])
+                lpbug_bionic = "".join(
+                    [x.status for x in lpbug.bug_tasks
+                        if "(Ubuntu Bionic)" in x.bug_target_name])
+                lpbug_xenial = "".join(
+                    [x.status for x in lpbug.bug_tasks
+                        if "(Ubuntu Xenial)" in x.bug_target_name])
+                lpbug_trusty = "".join(
+                    [x.status for x in lpbug.bug_tasks
+                        if "(Ubuntu Trusty)" in x.bug_target_name])
 
                 issue['Heat'] = str(lpbug.heat)
                 issue['Importance'] = lpbug_importance
@@ -492,7 +517,8 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
                     jira_key = issue["JIRA ID"]
                     jira_issue = jira.issue(jira_key)
                     if "DisableLPSync" in jira_issue.fields.labels:
-                        print("\n[Sync]- Disabled by user for {}".format(jira_key))
+                        print("\n[Sync]- Disabled by user for {}".format(
+                            jira_key))
                         continue
 
                     sync_title(issue, jira, lp)
@@ -509,8 +535,8 @@ def main(args=None):
     global jira_server
 
     opt_parser = argparse.ArgumentParser(
-            description="Report the status of all active LaunchPad bug "\
-                "imported into a JIRA project with lp-to-jira",
+            description="Report the status of all active LaunchPad bug "
+                        "imported into a JIRA project with lp-to-jira",
             formatter_class=argparse.RawTextHelpFormatter,
             epilog=textwrap.dedent('''\
             Examples:
@@ -541,7 +567,7 @@ def main(args=None):
     )
     opt_parser.add_argument(
         '--sync',
-        dest='sync',action='store_true',
+        dest='sync', action='store_true',
         help='Sync JIRA items with corresponding bugs in LP',
     )
 
@@ -560,16 +586,22 @@ def main(args=None):
     # TODO: catch exception if the Launchpad API isn't open
     snap_home = os.getenv("SNAP_USER_COMMON")
     if snap_home:
-        credential_store = UnencryptedFileCredentialStore("{}/.lp_creds".format(snap_home))
+        credential_store = UnencryptedFileCredentialStore(
+            "{}/.lp_creds".format(snap_home))
     else:
-        credential_store = UnencryptedFileCredentialStore(os.path.expanduser("~/.lp_creds"))
+        credential_store = UnencryptedFileCredentialStore(
+            os.path.expanduser("~/.lp_creds"))
     lp = Launchpad.login_with(
         'foundations',
         'production',
-        version='devel',credential_store=credential_store)
+        version='devel',
+        credential_store=credential_store)
 
-    print("Searching for JIRA issues in project %s imported with lp-to-jira..."\
-        % opts.project, flush=True)
+    print(
+        "Searching for JIRA issues in project %s imported with lp-to-jira..."
+        % opts.project,
+        flush=True
+        )
 
     # Create a Database of all JIRA issues imported by lp-to-jira
     jira_lp_db = find_issues_in_project(jira, jira_project)

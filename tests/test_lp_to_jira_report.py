@@ -1,11 +1,11 @@
-import pytest
-
 from unittest.mock import Mock
+
 
 from LpToJira.lp_to_jira_report import \
     find_issues_in_project,\
     get_bug_id,\
     sync_title
+
 
 def test_get_bug_id():
     assert get_bug_id("") == ""
