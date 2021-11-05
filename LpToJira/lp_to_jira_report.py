@@ -15,7 +15,7 @@ from launchpadlib.credentials import UnencryptedFileCredentialStore
 
 from jira import JIRA
 from LpToJira.jira_api import jira_api
-
+from LpToJira.lp_bug import lp_bug, ubuntu_devel
 
 jira_server = ""
 jira_project = ""
@@ -413,7 +413,7 @@ def sync_title(issue, jira, lp):
     return False
 
 
-def sync_release(issue, jira):
+def sync_release(issue, jira, lp):
     if not issue or not jira:
         return False
 
@@ -425,16 +425,24 @@ def sync_release(issue, jira):
     # automation 1: check for release status over all series and move the
     # to Done if they are all Fix Released or Won't Fix
     released = False
-    statuses = [issue[x] for x in issue.keys()][
-        list(issue.keys()).index("Devel"):]
 
-    # Need some non empty statuses
-    if statuses.count('') != len(statuses):
-        for status in statuses:
-            if status in ["Fix Released", ""]:
-                released = True
-            else:
-                released = False
+    try:
+        # Rather than going through the status in the json DB, we go directly
+        # To the LP bug and go through all the affected packages
+        # and if for all the packages and all the series it is either Fix
+        # Released or Won't Fix, Well then it is DONE in JIRA
+        bug = lp_bug(lp_id, lp)
+        for pkg in bug.affected_packages:
+            for serie in bug.affected_series(pkg):
+                if bug.package_detail(
+                        pkg,
+                        serie,
+                        "status") in ["Fix Released", "Won't Fix"]:
+                    released = True
+                else:
+                    released = False
+                    break
+            if not released:
                 break
 
         if released:
@@ -450,6 +458,10 @@ def sync_release(issue, jira):
             jira.add_comment(jira_issue, comment)
             jira.transition_issue(jira_issue, transition='Done')
             return True
+
+    except Exception:
+        return False
+
     return False
 
 
@@ -469,65 +481,62 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
         lpbug_trusty = ""
 
         try:
-            lpbug = lp.bugs[int(issue['LaunchPad ID'])]
-            list_pkg = [x.bug_target_name.split()[0]
-                        for x in lpbug.bug_tasks
-                        if "(Ubuntu)" in x.bug_target_name]
-            bug_pkg = ", ".join(list_pkg)
+            lpbug = lp_bug(issue['LaunchPad ID'], lp)
 
-            if len(list_pkg) == 1:
-                lpbug_importance = list(
-                    importance_color.keys())[min([list(
-                        importance_color.keys()).index(x.importance)
-                            for x in lpbug.bug_tasks])]
-                lpbug_devel = "".join(
-                    [x.status for x in lpbug.bug_tasks
-                        if "(Ubuntu)" in x.bug_target_name])
-                lpbug_impish = "".join(
-                    [x.status for x in lpbug.bug_tasks
-                        if "(Ubuntu Impish])" in x.bug_target_name])
-                lpbug_hirsute = "".join(
-                    [x.status for x in lpbug.bug_tasks
-                        if "(Ubuntu Hirsute)" in x.bug_target_name])
-                lpbug_focal = "".join(
-                    [x.status for x in lpbug.bug_tasks
-                        if "(Ubuntu Focal)" in x.bug_target_name])
-                lpbug_bionic = "".join(
-                    [x.status for x in lpbug.bug_tasks
-                        if "(Ubuntu Bionic)" in x.bug_target_name])
-                lpbug_xenial = "".join(
-                    [x.status for x in lpbug.bug_tasks
-                        if "(Ubuntu Xenial)" in x.bug_target_name])
-                lpbug_trusty = "".join(
-                    [x.status for x in lpbug.bug_tasks
-                        if "(Ubuntu Trusty)" in x.bug_target_name])
+            # We will focus on the first package in the list of affected
+            # packages, not ideal but not sure there's a better way
+            # Maybe we should just ignore individual packages status...
+            if lpbug.affected_packages:
+                pkg = lpbug.affected_packages[0]
 
-                issue['Heat'] = str(lpbug.heat)
-                issue['Importance'] = lpbug_importance
-                issue['Packages'] = bug_pkg
-                issue["Devel"] = lpbug_devel
-                issue["Impish"] = lpbug_impish
-                issue["Hirsute"] = lpbug_hirsute
-                issue["Focal"] = lpbug_focal
-                issue["Bionic"] = lpbug_bionic
-                issue["Xenial"] = lpbug_xenial
-                issue["Trusty"] = lpbug_trusty
+                if lpbug.affected_series(pkg):
+                    lpbug_importance = lpbug.package_detail(
+                        pkg,
+                        lpbug.affected_series(pkg)[0],
+                        "importance")
 
-                if sync:
-                    jira_key = issue["JIRA ID"]
-                    jira_issue = jira.issue(jira_key)
-                    if "DisableLPSync" in jira_issue.fields.labels:
-                        print("\n[Sync]- Disabled by user for {}".format(
-                            jira_key))
-                        continue
+                    lpbug_devel = lpbug.package_detail(
+                        pkg, ubuntu_devel, "status")
+                    lpbug_impish = lpbug.package_detail(
+                        pkg, "Impish", "status")
+                    lpbug_hirsute = lpbug.package_detail(
+                        pkg, "Hirsute", "status")
+                    lpbug_focal = lpbug.package_detail(
+                        pkg, "Focal", "status")
+                    lpbug_bionic = lpbug.package_detail(
+                        pkg, "Bionic", "status")
+                    lpbug_xenial = lpbug.package_detail(
+                        pkg, "Xenial", "status")
+                    lpbug_trusty = lpbug.package_detail(
+                        pkg, "Trusty", "status")
 
-                    sync_title(issue, jira, lp)
-                    if sync_release(issue, jira):
-                        # Must remove the element as it is released
-                        issues.remove(issue)
+            issue['Heat'] = str(lpbug.heat)
+            issue['Importance'] = lpbug_importance
+            issue['Packages'] = pkg
+            issue["Devel"] = lpbug_devel
+            issue["Impish"] = lpbug_impish
+            issue["Hirsute"] = lpbug_hirsute
+            issue["Focal"] = lpbug_focal
+            issue["Bionic"] = lpbug_bionic
+            issue["Xenial"] = lpbug_xenial
+            issue["Trusty"] = lpbug_trusty
+
+            if sync:
+                jira_key = issue["JIRA ID"]
+                jira_issue = jira.issue(jira_key)
+                if "DisableLPSync" in jira_issue.fields.labels:
+                    print("\n[Sync]- Disabled by user for {}".format(
+                        jira_key))
+                    continue
+
+                sync_title(issue, jira, lp)
+                if sync_release(issue, jira, lp):
+                    # Must remove the element as it is released
+                    issues.remove(issue)
 
         except Exception:
             print("\nCouldn't find the Launchpad bug {}".format(lpbug.id))
+
     print()
 
 
