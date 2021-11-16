@@ -123,7 +123,7 @@ def is_bug_in_jira(jira, bug, project_id):
     return False
 
 
-def build_jira_issue(lp, bug, project_id):
+def build_jira_issue(lp, bug, project_id, opts):
     """Builds and return a dict to create a Jira Issue from"""
 
     # Get bug info from LP
@@ -137,9 +137,12 @@ def build_jira_issue(lp, bug, project_id):
         'issuetype': {'name': 'Bug'}
     }
 
-    jira_component = [
-        {"name": pkg_to_component.get(bug_pkg, default_component)}
-    ]
+    if opts.component:
+        jira_component = [{"name": opts.component}]
+    else:
+        jira_component = [
+            {"name": pkg_to_component.get(bug_pkg, default_component)}
+        ]
     issue_dict["components"] = jira_component
 
     return issue_dict
@@ -166,7 +169,7 @@ def lp_to_jira_bug(lp, jira, bug, project_id, opts):
     if is_bug_in_jira(jira, bug, project_id):
         return
 
-    issue_dict = build_jira_issue(lp, bug, project_id)
+    issue_dict = build_jira_issue(lp, bug, project_id, opts)
     if opts.label:
         # Add labels if specified
         issue_dict["labels"] = [opts.label]
@@ -206,6 +209,11 @@ def main(args=None):
         '--label',
         dest='label',
         help='Add LABEL to the JIRA issue after creation')
+    opt_parser.add_argument(
+        '-c',
+        '--component',
+        dest='component',
+        help='Specify COMPONENT to assign the issue to')
     opt_parser.add_argument(
         '-e', '--exists',
         dest='exists',
