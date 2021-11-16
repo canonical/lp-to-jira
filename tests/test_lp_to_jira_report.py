@@ -4,6 +4,7 @@ from unittest.mock import Mock
 from LpToJira.lp_to_jira_report import \
     find_issues_in_project,\
     get_bug_id,\
+    merge_lp_data_with_jira_issues,\
     sync_title
 
 
@@ -56,3 +57,23 @@ def test_sync_title(issue, jira, lp):
             }
 
     assert not sync_title(bad_issue, jira, lp)
+
+
+def test_merge_lp_data_with_jira_issues():
+    assert merge_lp_data_with_jira_issues(None, None, []) == []
+
+    jira_db = [
+        {'JIRA ID': "KEY-001",
+         'Summary': "LP1111 jira Bug",
+         'Status': "In Progress",
+         'LaunchPad ID': '1111'},
+        {'JIRA ID': "KEY-002",
+         'Summary': "LP2222 jira Bug",
+         'Status': "In Progress",
+         'LaunchPad ID': '2222'},
+        {'JIRA ID': "KEY-003",
+         'Summary': "LP3333 jira Bug",
+         'Status': "In Progress",
+         'LaunchPad ID': '3333'}
+         ]
+

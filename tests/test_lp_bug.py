@@ -91,7 +91,7 @@ def test_bug_str(lp_api):
 
     bug = lp_bug(6, lp_api)
     bug_str = "LP: #6 : This is the title of a bug\n"\
-        "Heat: 100\n - systemd:\n   - "+ ubuntu_devel +" : New (Critical)"
+        "Heat: 100\n - systemd:\n   - " + ubuntu_devel + " : New (Critical)"
     assert str(bug) == bug_str
 
 
