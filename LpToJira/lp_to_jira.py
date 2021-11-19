@@ -123,7 +123,7 @@ def is_bug_in_jira(jira, bug, project_id):
     return False
 
 
-def build_jira_issue(lp, bug, project_id, opts):
+def build_jira_issue(lp, bug, project_id, opts=None):
     """Builds and return a dict to create a Jira Issue from"""
 
     # Get bug info from LP
@@ -137,7 +137,7 @@ def build_jira_issue(lp, bug, project_id, opts):
         'issuetype': {'name': 'Bug'}
     }
 
-    if opts.component:
+    if opts and opts.component:
         jira_component = [{"name": opts.component}]
     else:
         jira_component = [
@@ -148,7 +148,7 @@ def build_jira_issue(lp, bug, project_id, opts):
     return issue_dict
 
 
-def create_jira_issue(jira, issue_dict, bug, opts):
+def create_jira_issue(jira, issue_dict, bug, opts=None):
     """Create and return a Jira Issue from issue_dict"""
 
     # Import the bug and return the JIRA ID for said bug
@@ -160,7 +160,7 @@ def create_jira_issue(jira, issue_dict, bug, opts):
 
     print("Created {}/browse/{}".format(jira.client_info(), new_issue.key))
 
-    if opts.epic:
+    if opts and opts.epic:
         try:
             jira.add_issues_to_epic(opts.epic, [new_issue.id])
             print("Added to Epic %s" % opts.epic)
