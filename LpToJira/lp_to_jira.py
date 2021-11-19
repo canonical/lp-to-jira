@@ -35,7 +35,6 @@ pkg_to_component = {
     "cpe-foundation": "FCE",
     "fce-templates": "FCE Templates",
 }
-default_component = "Distro"
 
 
 def get_lp_bug(lp, bug_number):
@@ -141,7 +140,7 @@ def build_jira_issue(lp, bug, project_id, opts=None):
         jira_component = [{"name": opts.component}]
     else:
         jira_component = [
-            {"name": pkg_to_component.get(bug_pkg, default_component)}
+            {"name": pkg_to_component.get(bug_pkg)}
         ]
     issue_dict["components"] = jira_component
 

@@ -90,7 +90,7 @@ def test_build_jira_issue(empty_bug):
     default_jira_bug = {'project': '',
                         'summary': 'LP#0 [None] ',
                         'description': '', 'issuetype': {'name': 'Bug'},
-                        'components': [{'name': 'Distro'}]}
+                        'components': [{'name': None}]}
 
     assert build_jira_issue(None, empty_bug, "") == default_jira_bug
 
