@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from launchpadlib.launchpad import Launchpad
 from launchpadlib.credentials import UnencryptedFileCredentialStore
 
-from jira import JIRA
+from jira import JIRA, JIRAError
 from LpToJira.jira_api import jira_api
 
 
@@ -35,7 +35,6 @@ pkg_to_component = {
     "cpe-foundation": "FCE",
     "fce-templates": "FCE Templates",
 }
-default_component = "Distro"
 
 
 def get_lp_bug(lp, bug_number):
@@ -123,7 +122,7 @@ def is_bug_in_jira(jira, bug, project_id):
     return False
 
 
-def build_jira_issue(lp, bug, project_id):
+def build_jira_issue(lp, bug, project_id, opts=None):
     """Builds and return a dict to create a Jira Issue from"""
 
     # Get bug info from LP
@@ -137,15 +136,18 @@ def build_jira_issue(lp, bug, project_id):
         'issuetype': {'name': 'Bug'}
     }
 
-    jira_component = [
-        {"name": pkg_to_component.get(bug_pkg, default_component)}
-    ]
+    if opts and opts.component:
+        jira_component = [{"name": opts.component}]
+    else:
+        jira_component = [
+            {"name": pkg_to_component.get(bug_pkg)}
+        ]
     issue_dict["components"] = jira_component
 
     return issue_dict
 
 
-def create_jira_issue(jira, issue_dict, bug):
+def create_jira_issue(jira, issue_dict, bug, opts=None):
     """Create and return a Jira Issue from issue_dict"""
 
     # Import the bug and return the JIRA ID for said bug
@@ -157,6 +159,13 @@ def create_jira_issue(jira, issue_dict, bug):
 
     print("Created {}/browse/{}".format(jira.client_info(), new_issue.key))
 
+    if opts and opts.epic:
+        try:
+            jira.add_issues_to_epic(opts.epic, [new_issue.id])
+            print("Added to Epic %s" % opts.epic)
+        except JIRAError as err:
+            print("Failed to add to Epic {0}:\n{1}".format(opts.epic, err))
+
     return new_issue
 
 
@@ -166,12 +175,12 @@ def lp_to_jira_bug(lp, jira, bug, project_id, opts):
     if is_bug_in_jira(jira, bug, project_id):
         return
 
-    issue_dict = build_jira_issue(lp, bug, project_id)
+    issue_dict = build_jira_issue(lp, bug, project_id, opts)
     if opts.label:
         # Add labels if specified
         issue_dict["labels"] = [opts.label]
 
-    jira_issue = create_jira_issue(jira, issue_dict, bug)
+    jira_issue = create_jira_issue(jira, issue_dict, bug, opts)
 
     if not opts.no_lp_tag:
         # Add reference to the JIRA entry in the bugs on Launchpad
@@ -206,6 +215,16 @@ def main(args=None):
         '--label',
         dest='label',
         help='Add LABEL to the JIRA issue after creation')
+    opt_parser.add_argument(
+        '-c',
+        '--component',
+        dest='component',
+        help='Specify COMPONENT to assign the issue to')
+    opt_parser.add_argument(
+        '-E',
+        '--epic',
+        dest='epic',
+        help='Specify EPIC to link this new issue to')
     opt_parser.add_argument(
         '-e', '--exists',
         dest='exists',
