@@ -17,7 +17,7 @@ parts:
     stage-packages:
       - python3-wheel
     python-packages:
-      - jira
+      - jira == 3.0.1
       - launchpadlib
     source: .
 
