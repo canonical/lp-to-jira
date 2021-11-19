@@ -12,28 +12,37 @@ JIRA API token can be created here https://id.atlassian.com/manage-profile/secur
 
 ## Usage:
 ```
-Usage: lp-to-jira [options] bug-id project-id
+usage: lp-to-jira [-h] [-l LABEL] [-c COMPONENT] [-E EPIC] [-e] [-s SYNC_PROJECT_BUGS] [-d DAYS] [--no-lp-tag] [bug] project
 
-Create JIRA entry for a given Launchpad bug ID
+A script create JIRA issue from Launchpad bugs
 
-options:
-    -e, --exists"
-                Look if the Launchpad Bug has alreaady been imported
-                print the JIRA issue ID if found
-    -l, --label LABEL
-                Add LABEL to the JIRA issue after creation
-    -s SYNC_PROJECT_BUGS, --sync_project_bugs=SYNC_PROJECT_BUGS
-                The name of the LP Project. This will bring in every
-                bug from your project if you do not also specify days
-    -d DAYS, --days=DAYS
-                Only look for LP Bugs in the past n days
-    --no-lp-tag
+positional arguments:
+  bug                   The Launchpad numeric bug ID
+  project               The JIRA project string key
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l LABEL, --label LABEL
+                        Add LABEL to the JIRA issue after creation
+  -c COMPONENT, --component COMPONENT
+                        Specify COMPONENT to assign the issue to
+  -E EPIC, --epic EPIC  Specify EPIC to link this new issue to
+  -e, --exists
+                        Look if the Launchpad Bug has alreaady been imported
+                        print the JIRA issue ID if found
+  -s SYNC_PROJECT_BUGS, --sync_project_bugs SYNC_PROJECT_BUGS
+                        Adds all bugs from a specified LP Project to specified Jira board
+                        if they are not already on the Jira board.
+                        Use --days to narrow down bugs
+  -d DAYS, --days DAYS  Only look for LP Bugs in the past n days
+  --no-lp-tag           Do not add tag to LP Bug
 
 Examples:
     lp-to-jira 3215487 FR
     lp-to-jira -e 3215487 FR
     lp-to-jira -l ubuntu-meeting 3215487 PR
     lp-to-jira -s ubuntu -d 3 IQA
+    lp-to-jira --no-lp-tag -c Network -E FS-543 123231 PR
 ```
 
 # lp-to-jira-report
