@@ -535,8 +535,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
                     issues.remove(issue)
 
         except Exception:
-            print("\nCouldn't find the Launchpad bug {}".format(lpbug.id))
-
+            print("\nCouldn't find the Launchpad bug {}".format(issue['LaunchPad ID']))
     print()
 
 
