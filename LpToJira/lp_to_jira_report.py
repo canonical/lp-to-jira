@@ -482,10 +482,14 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
 
         try:
             lpbug = lp_bug(issue['LaunchPad ID'], lp)
-
             # We will focus on the first package in the list of affected
             # packages, not ideal but not sure there's a better way
             # Maybe we should just ignore individual packages status...
+
+            # setting default package to None in case bug is open against a
+            # project rather than agasint a package
+            pkg = "none"
+
             if lpbug.affected_packages:
                 pkg = lpbug.affected_packages[0]
 
@@ -520,6 +524,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
             issue["Bionic"] = lpbug_bionic
             issue["Xenial"] = lpbug_xenial
             issue["Trusty"] = lpbug_trusty
+
 
             if sync:
                 jira_key = issue["JIRA ID"]
