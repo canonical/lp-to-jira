@@ -12,7 +12,7 @@ JIRA API token can be created here https://id.atlassian.com/manage-profile/secur
 
 ## Usage:
 ```
-usage: lp-to-jira [-h] [-l LABEL] [-c COMPONENT] [-E EPIC] [-e] [-s SYNC_PROJECT_BUGS] [-d DAYS] [--no-lp-tag] [bug] project
+usage: lp-to-jira [-h] [-l LABEL] [-c COMPONENT] [-E EPIC] [-e] [-s SYNC_PROJECT_BUGS] [-d DAYS] [-t TAGS] [--no-lp-tag] [bug] project
 
 A script create JIRA issue from Launchpad bugs
 
@@ -31,10 +31,14 @@ optional arguments:
                         Look if the Launchpad Bug has alreaady been imported
                         print the JIRA issue ID if found
   -s SYNC_PROJECT_BUGS, --sync_project_bugs SYNC_PROJECT_BUGS
+
                         Adds all bugs from a specified LP Project to specified Jira board
                         if they are not already on the Jira board.
                         Use --days to narrow down bugs
   -d DAYS, --days DAYS  Only look for LP Bugs in the past n days
+  -t TAGS, --tag TAGS
+                        Only look for LP Bugs with the specified tag(s). To exclude,
+                        prepend a '-', e.g. '-unwantedtag'
   --no-lp-tag           Do not add tag to LP Bug
 
 Examples:
@@ -43,6 +47,10 @@ Examples:
     lp-to-jira -l ubuntu-meeting 3215487 PR
     lp-to-jira -s ubuntu -d 3 IQA
     lp-to-jira --no-lp-tag -c Network -E FS-543 123231 PR
+    lp-to-jira -s ubuntu -t go-to-jira PR
+    lp-to-jira -s ubuntu -t go-to-jira -t also-to-jira PR
+    lp-to-jira -s ubuntu -t=-ignore-these PR
+
 ```
 
 # lp-to-jira-report
