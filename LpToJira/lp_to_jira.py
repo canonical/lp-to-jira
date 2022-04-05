@@ -56,21 +56,12 @@ def get_lp_bug(lp, bug_number):
 
 def get_lp_bug_pkg(bug):
     """
-    From a LP bug, get its package
-    a Launchpad bug may impact multiple packages,
-    this function is pretty unprecise as it returns only the latest package
-    TODO: probably do something about this, return a list or fail if multiple
-    packages.
+    From a LP bug, get its package.
+
+    A Launchpad bug may impact multiple packages.
     """
-
-    bug_pkg = None
-
-    # Only return bug from Ubuntu (will return the last one if multiple pkgs
-    for task in bug.bug_tasks:
-        if "(Ubuntu" in task.bug_target_name:
-            bug_pkg = task.bug_target_name.split()[0]
-
-    return bug_pkg
+    # Return the list of packages affected in a bug
+    return set([task.bug_target_name.split()[0] for task in bug.bug_tasks])
 
 
 def get_all_lp_project_bug_tasks(lp, project, days=None):
@@ -126,22 +117,33 @@ def build_jira_issue(lp, bug, project_id, opts=None):
     """Builds and return a dict to create a Jira Issue from"""
 
     # Get bug info from LP
-    bug_pkg = get_lp_bug_pkg(bug)
+    bug_pkgs = get_lp_bug_pkg(bug)
+    if bug_pkgs:
+        summary_tmpl = "LP#{bug_id} {bug_pkgs} {bug_title}"
+    else:
+        summary_tmpl = "LP#{bug_id} {bug_title}"
 
     # Build the Jira Issue from the LP info
     issue_dict = {
         'project': project_id,
-        'summary': 'LP#{} [{}] {}'.format(bug.id, bug_pkg, bug.title),
+        'summary': summary_tmpl.format(
+            bug_id=bug.id,
+            bug_pkgs="".join(["[{}]".format(bug_pkg) for bug_pkg in bug_pkgs]),
+            bug_title=bug.title,
+        ),
         'description': bug.description,
         'issuetype': {'name': 'Bug'}
     }
 
     if opts and opts.component:
         jira_component = [{"name": opts.component}]
-    else:
+    elif isinstance(bug_pkgs, str):
         jira_component = [
-            {"name": pkg_to_component.get(bug_pkg)}
+            {"name": pkg_to_component.get(bug_pkgs)}
         ]
+    else:
+        # skip components
+        return issue_dict
     issue_dict["components"] = jira_component
 
     return issue_dict
