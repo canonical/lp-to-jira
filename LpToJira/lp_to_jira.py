@@ -65,11 +65,13 @@ def get_lp_bug_pkg(bug):
 
     bug_pkg = None
 
-    # Only return bug from Ubuntu (will return the last one if multiple pkgs
+    # Be sure to return a package name. (returns the last one found if more
+    # than one package has been added)
     for task in bug.bug_tasks:
         if "(Ubuntu" in task.bug_target_name:
             bug_pkg = task.bug_target_name.split()[0]
-
+        else:
+            bug_pkg = task.bug_target_name
     return bug_pkg
 
 

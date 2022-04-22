@@ -20,7 +20,7 @@ jira_project = ""
 db_json = "lp_to_jira_db.json"
 
 def get_bug_id(summary):
-    "Extract the bug id from a jira title whivh would icnlude LP#"
+    "Extract the bug id from a jira title which would include LP#"
     id = ""
 
     if "LP#" in summary:
