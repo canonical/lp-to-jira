@@ -2,10 +2,11 @@
 # Simple LaunchPad Bug object used to store some informations from LaunchPad
 # into a structure that can be stored in and out of a json file
 
-ubuntu_devel = 'Jammy'
+ubuntu_devel = 'Kinetic'
 
 ubuntu_version = {
-    ubuntu_devel: '22.04',
+    ubuntu_devel: '22.10',
+    'Jammy': '22.04',
     'Impish': '21.10',
     'Hirsute': '21.04',
     'Groovy': '20.10',

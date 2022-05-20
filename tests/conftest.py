@@ -158,6 +158,7 @@ def issue():
                 'Importance': '',
                 'Packages': '',
                 "Devel": '',
+                "Jammy": '',
                 "Impish": '',
                 "Hirsute": '',
                 "Focal": '',
