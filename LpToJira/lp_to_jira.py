@@ -230,7 +230,7 @@ def main(args=None):
         dest='exists',
         action='store_true',
         help=textwrap.dedent('''
-            Look if the Launchpad Bug has alreaady been imported
+            Look if the Launchpad Bug has already been imported
             print the JIRA issue ID if found
         ''')
     )

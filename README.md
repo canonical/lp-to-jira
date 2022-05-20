@@ -28,7 +28,7 @@ optional arguments:
                         Specify COMPONENT to assign the issue to
   -E EPIC, --epic EPIC  Specify EPIC to link this new issue to
   -e, --exists
-                        Look if the Launchpad Bug has alreaady been imported
+                        Look if the Launchpad Bug has already been imported
                         print the JIRA issue ID if found
   -s SYNC_PROJECT_BUGS, --sync_project_bugs SYNC_PROJECT_BUGS
                         Adds all bugs from a specified LP Project to specified Jira board
