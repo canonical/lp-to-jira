@@ -73,7 +73,7 @@ def get_lp_bug_pkg(bug):
     return bug_pkg
 
 
-def get_all_lp_project_bug_tasks(lp, project, days=None):
+def get_all_lp_project_bug_tasks(lp, project, days=None, tags=None):
     """Return iterable IBugTasks of all Bugs in a Project filed in the past n
     days. If days is not specified, return all Bugs."""
 
@@ -101,7 +101,9 @@ def get_all_lp_project_bug_tasks(lp, project, days=None):
             'In Progress',
             'Fix Committed',
             'Fix Released'
-        ])
+        ],
+        tags=tags
+    )
 
     return bug_tasks
 
@@ -198,6 +200,10 @@ def main(args=None):
             lp-to-jira -e 3215487 FR
             lp-to-jira -l ubuntu-meeting 3215487 PR
             lp-to-jira -s ubuntu -d 3 IQA
+            lp-to-jira --no-lp-tag -c Network -E FS-543 123231 PR
+            lp-to-jira -s ubuntu -t go-to-jira PR
+            lp-to-jira -s ubuntu -t go-to-jira -t also-to-jira PR
+            lp-to-jira -s ubuntu -t=-ignore-these PR
         ''')
     )
     opt_parser.add_argument(
@@ -253,6 +259,16 @@ def main(args=None):
         help='Only look for LP Bugs in the past n days'
     )
     opt_parser.add_argument(
+        '-t', '--tag',
+        dest='tags',
+        action='append',
+        type=str,
+        help=textwrap.dedent('''
+            Only look for LP Bugs with the specified tag(s). To exclude,
+            prepend a '-', e.g. '-unwantedtag'
+            ''')
+    )
+    opt_parser.add_argument(
         '--no-lp-tag',
         dest='no_lp_tag',
         action='store_true',
@@ -290,7 +306,7 @@ def main(args=None):
 
     if opts.sync_project_bugs:
         tasks_list = get_all_lp_project_bug_tasks(
-            lp, opts.sync_project_bugs, opts.days)
+            lp, opts.sync_project_bugs, opts.days, opts.tags)
         if tasks_list is None:
             return 1
 
