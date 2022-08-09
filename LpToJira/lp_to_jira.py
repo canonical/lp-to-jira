@@ -156,7 +156,7 @@ def create_jira_issue(jira, issue_dict, bug, opts=None):
     new_issue = jira.create_issue(fields=issue_dict)
 
     # Adding a link to the Launchpad bug into the JIRA entry
-    link = {'url': bug.web_link, 'title': 'Launchpad Link'}
+    link = {'url': bug.web_link, 'title': 'Launchpad Link', 'icon': {'url16x16': 'https://bugs.launchpad.net/favicon.ico'}}
     jira.add_simple_link(new_issue, object=link)
 
     print("Created {}/browse/{}".format(jira.client_info(), new_issue.key))
