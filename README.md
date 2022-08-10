@@ -12,7 +12,7 @@ JIRA API token can be created here https://id.atlassian.com/manage-profile/secur
 
 ## Usage:
 ```
-usage: lp-to-jira [-h] [-l LABEL] [-c COMPONENT] [-E EPIC] [-e] [-s SYNC_PROJECT_BUGS] [-d DAYS] [-t TAGS] [--no-lp-tag] [bug] project
+usage: lp-to-jira [-h] [-l LABEL] [-c COMPONENT] [-E EPIC] [-e] [-s SYNC_PROJECT_BUGS] [-d DAYS] [-t TAGS] [--no-lp-link] [bug] project
 
 A script create JIRA issue from Launchpad bugs
 
@@ -39,14 +39,14 @@ optional arguments:
   -t TAGS, --tag TAGS
                         Only look for LP Bugs with the specified tag(s). To exclude,
                         prepend a '-', e.g. '-unwantedtag'
-  --no-lp-tag           Do not add tag to LP Bug
+  --no-lp-link          Do not add link in description to LP Bug
 
 Examples:
     lp-to-jira 3215487 FR
     lp-to-jira -e 3215487 FR
     lp-to-jira -l ubuntu-meeting 3215487 PR
     lp-to-jira -s ubuntu -d 3 IQA
-    lp-to-jira --no-lp-tag -c Network -E FS-543 123231 PR
+    lp-to-jira --no-lp-link -c Network -E FS-543 123231 PR
     lp-to-jira -s ubuntu -t go-to-jira PR
     lp-to-jira -s ubuntu -t go-to-jira -t also-to-jira PR
     lp-to-jira -s ubuntu -t=-ignore-these PR
