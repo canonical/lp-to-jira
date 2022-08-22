@@ -184,11 +184,15 @@ def lp_to_jira_bug(lp, jira, bug, project_id, opts):
 
     jira_issue = create_jira_issue(jira, issue_dict, bug, opts)
 
-    if not opts.no_lp_link:
+    if opts.lp_link:
         # Add reference to the JIRA entry in the bugs on Launchpad
         bug.description += '\n\n---\nExternal link: https://warthogs.atlassian.net/browse/'+jira_issue.key
         bug.lp_save()
 
+    if opts.lp_tag:
+        # Add reference to the JIRA entry in the bugs on Launchpad
+        bug.tags += [jira_issue.key.lower()]
+        bug.lp_save()
 
 def main(args=None):
     opt_parser = argparse.ArgumentParser(
@@ -200,7 +204,7 @@ def main(args=None):
             lp-to-jira -e 3215487 FR
             lp-to-jira -l ubuntu-meeting 3215487 PR
             lp-to-jira -s ubuntu -d 3 IQA
-            lp-to-jira --no-lp-link -c Network -E FS-543 123231 PR
+            lp-to-jira --lp-tag -c Network -E FS-543 123231 PR
             lp-to-jira -s ubuntu -t go-to-jira PR
             lp-to-jira -s ubuntu -t go-to-jira -t also-to-jira PR
             lp-to-jira -s ubuntu -t=-ignore-these PR
@@ -269,11 +273,18 @@ def main(args=None):
             ''')
     )
     opt_parser.add_argument(
-        '--no-lp-link',
-        dest='no_lp_link',
+        '--lp-link',
+        dest='lp_link',
         action='store_true',
-        help='Do not add link in description to LP Bug'
+        help='Add link in description to LP Bug'
     )
+    opt_parser.add_argument(
+        '--lp-tag',
+        dest='lp_tag',
+        action='store_true',
+        help='Add tag to LP Bug'
+    )
+
 
     opts = opt_parser.parse_args(args)
 
