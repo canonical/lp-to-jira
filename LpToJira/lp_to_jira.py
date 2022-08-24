@@ -273,10 +273,10 @@ def main(args=None):
             ''')
     )
     opt_parser.add_argument(
-        '--lp-link',
+        '--add-link-in-lp-desc',
         dest='lp_link',
         action='store_true',
-        help='Add link in description to LP Bug'
+        help='Add JIRA link in LP Bug description'
     )
     opt_parser.add_argument(
         '--no-lp-tag',
