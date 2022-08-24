@@ -156,7 +156,7 @@ def create_jira_issue(jira, issue_dict, bug, opts=None):
     new_issue = jira.create_issue(fields=issue_dict)
 
     # Adding a link to the Launchpad bug into the JIRA entry
-    link = {'url': bug.web_link, 'title': 'Launchpad Link'}
+    link = {'url': bug.web_link, 'title': 'Launchpad Link', 'icon': {'url16x16': 'https://bugs.launchpad.net/favicon.ico'}}
     jira.add_simple_link(new_issue, object=link)
 
     print("Created {}/browse/{}".format(jira.client_info(), new_issue.key))
@@ -184,11 +184,15 @@ def lp_to_jira_bug(lp, jira, bug, project_id, opts):
 
     jira_issue = create_jira_issue(jira, issue_dict, bug, opts)
 
+    if opts.lp_link:
+        # Add reference to the JIRA entry in the bugs on Launchpad
+        bug.description += '\n\n---\nExternal link: https://warthogs.atlassian.net/browse/'+jira_issue.key
+        bug.lp_save()
+
     if not opts.no_lp_tag:
         # Add reference to the JIRA entry in the bugs on Launchpad
         bug.tags += [jira_issue.key.lower()]
         bug.lp_save()
-
 
 def main(args=None):
     opt_parser = argparse.ArgumentParser(
@@ -267,6 +271,12 @@ def main(args=None):
             Only look for LP Bugs with the specified tag(s). To exclude,
             prepend a '-', e.g. '-unwantedtag'
             ''')
+    )
+    opt_parser.add_argument(
+        '--add-link-in-lp-desc',
+        dest='lp_link',
+        action='store_true',
+        help='Add JIRA link in LP Bug description'
     )
     opt_parser.add_argument(
         '--no-lp-tag',
