@@ -141,10 +141,15 @@ def build_jira_issue(lp, bug, project_id, opts=None):
     if opts and opts.component:
         jira_component = [{"name": opts.component}]
     else:
-        jira_component = [
-            {"name": pkg_to_component.get(bug_pkg)}
-        ]
-    issue_dict["components"] = jira_component
+        if pkg_to_component.get(bug_pkg) != None:
+            jira_component = [
+                {"name": pkg_to_component.get(bug_pkg)}
+            ]
+        else:
+            jira_component = None
+
+    if jira_component != None:
+        issue_dict["components"] = jira_component
 
     return issue_dict
 
