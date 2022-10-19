@@ -139,12 +139,13 @@ def build_jira_issue(lp, bug, project_id, opts=None):
     }
 
     if opts and opts.component:
-        jira_component = [{"name": opts.component}]
+        component = opts.component
     else:
-        jira_component = [
-            {"name": pkg_to_component.get(bug_pkg)}
-        ]
-    issue_dict["components"] = jira_component
+        component = pkg_to_component.get(bug_pkg)
+
+    # Only add component to the JIRA issue if it there's an acual component
+    if component:
+        issue_dict["components"] = [{"name": component}]
 
     return issue_dict
 
