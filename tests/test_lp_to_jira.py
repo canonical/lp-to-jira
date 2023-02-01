@@ -90,9 +90,11 @@ def test_build_jira_issue(empty_bug):
     default_jira_bug = {'project': '',
                         'summary': 'LP#0 [None] ',
                         'description': '', 'issuetype': {'name': 'Bug'},
-                        'components': [{'name': None}]}
+                        'components': [{'name': 'nplan'}]}
+    opts = Mock()
+    opts.component = 'nplan'
 
-    assert build_jira_issue(None, empty_bug, "") == default_jira_bug
+    assert build_jira_issue(None, empty_bug, "",opts=opts) == default_jira_bug
 
 
 def test_create_jira_issue(empty_bug, capsys):

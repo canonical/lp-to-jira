@@ -187,7 +187,7 @@ def lp_to_jira_bug(lp, jira, bug, project_id, opts):
 
     if opts.lp_link:
         # Add reference to the JIRA entry in the bugs on Launchpad
-        bug.description += '\n\n---\nExternal link: https://warthogs.atlassian.net/browse/'+jira_issue.key
+        bug.description += '\n\n---\nExternal link: https://warthogs.atlassian.net/browse/'+str(jira_issue.key)
         bug.lp_save()
 
     if not opts.no_lp_tag:
