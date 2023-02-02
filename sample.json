@@ -1,0 +1,34 @@
+[
+  {
+    "launchpad_project": "nosuchlpproject01",
+    "jira_project": "JIRAPROJECTKEY01",
+    "issue_type" : "Bug",
+    "assignees": [
+      "userid00",
+      "userid01",
+      "userid03",
+      "userid04"
+    ]
+  },
+  {
+    "launchpad_project": "nosuchlpproject02",
+    "jira_project": "JIRAPROJECTKEY02",
+    "issue_type" : "Bug",
+    "assignees": [
+      "userid00",
+      "userid02",
+      "userid04"
+    ]
+  },
+  {
+    "launchpad_project": "nosuchlpproject03",
+    "jira_project": "JIRAPROJECTKEY03",
+    "issue_type" : "Bug",
+    "assignees": [
+      "userid01",
+      "userid05",
+      "userid07",
+      "userid08"
+    ]
+  }
+]

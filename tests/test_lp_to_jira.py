@@ -89,13 +89,18 @@ def test_build_jira_issue(empty_bug):
     # TODO improve coverage to test for non empty bug
     default_jira_bug = {'project': '',
                         'summary': 'LP#0 [None] ',
-                        'description': '', 'issuetype': {'name': 'Bug'},
+                        'description': '',
+                        'issuetype': {'name': 'Bug'},
                         'components': [{'name': 'nplan'}]}
     opts = Mock()
     opts.component = 'nplan'
 
-    assert build_jira_issue(None, empty_bug, "",opts=opts) == default_jira_bug
+    assert build_jira_issue(None, empty_bug, "", 'Bug', opts=opts) == default_jira_bug
 
+    issuetype = 'Launchpad Bug'
+    default_jira_bug['issuetype']['name'] = issuetype
+
+    assert build_jira_issue(None, empty_bug, "", issuetype, opts=opts) == default_jira_bug
 
 def test_create_jira_issue(empty_bug, capsys):
     jira = Mock()
@@ -104,7 +109,7 @@ def test_create_jira_issue(empty_bug, capsys):
     jira.add_simple_link = Mock(return_value=None)
     jira.client_info = Mock(return_value="jira")
 
-    issue_dict = build_jira_issue(None, empty_bug, "")
+    issue_dict = build_jira_issue(None, empty_bug, 'Bug', "")
 
     jira_issue = create_jira_issue(jira, issue_dict, empty_bug)
 
@@ -118,25 +123,39 @@ def test_create_jira_issue(empty_bug, capsys):
 
 
 def test_lp_to_jira_bug(lp, empty_bug):
+    config00 = {'jira_project': 'AA'}
+    config01 = {'jira_project': 'AA', 'assignees' : [ "userid00", "userid01"]}
     jira = Mock()
 
     jira_issue = [Mock(key="key")]
     jira.search_issues = Mock(return_value=jira_issue)
     jira.client_info = Mock(return_value="jira")
 
-    lp_to_jira_bug(lp, jira, empty_bug, "AA", [''])
+    lp_to_jira_bug(lp, jira, empty_bug, config00, [''])
 
     jira.search_issues = Mock(return_value=None)
 
-    opts = Mock()
-    opts.label = ""
-    lp_to_jira_bug(lp, jira, empty_bug, "AA", opts)
+    for dry_run in [ True, False ]:
+        opts = Mock()
+        opts.dry_run = dry_run
+        opts.label = ""
+        lp_to_jira_bug(lp, jira, empty_bug, config00, opts)
 
-    opts.label = "label"
-    lp_to_jira_bug(lp, jira, empty_bug, "AA", opts)
+        opts.label = "label"
+        lp_to_jira_bug(lp, jira, empty_bug, config00, opts)
 
-    opts.no_lp_tag = False
-    lp_to_jira_bug(lp, jira, empty_bug, "AA", opts)
+        opts.no_lp_tag = False
+        lp_to_jira_bug(lp, jira, empty_bug, config00, opts)
 
+        opts.lp_link = True
+        serie01 = Mock()
+        serie01.bug_target_name = "aa"
+        serie01.assignee = "https://api.launchpad.net/devel/~userid00"
+        serie02 = Mock()
+        serie02.bug_target_name = "bb"
+        serie02.assignee = "https://api.launchpad.net/devel/~userid02"
+        empty_bug.bug_tasks = [ serie01, serie02]
+        lp_to_jira_bug(lp, jira, empty_bug, config00, opts)
+        lp_to_jira_bug(lp, jira, empty_bug, config01, opts)
 
 # =============================================================================

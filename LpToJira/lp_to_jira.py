@@ -3,8 +3,9 @@
 # create a new Entry in JIRA in a given project
 
 
-import os
 import argparse
+import json
+import os
 import textwrap
 
 from datetime import datetime, timedelta
@@ -124,7 +125,7 @@ def is_bug_in_jira(jira, bug, project_id):
     return False
 
 
-def build_jira_issue(lp, bug, project_id, opts=None):
+def build_jira_issue(lp, bug, project_id, issue_type, opts=None):
     """Builds and return a dict to create a Jira Issue from"""
 
     # Get bug info from LP
@@ -135,7 +136,7 @@ def build_jira_issue(lp, bug, project_id, opts=None):
         'project': project_id,
         'summary': 'LP#{} [{}] {}'.format(bug.id, bug_pkg, bug.title),
         'description': bug.description,
-        'issuetype': {'name': 'Bug'}
+        'issuetype': {'name': issue_type}
     }
 
     if opts and opts.component:
@@ -172,28 +173,58 @@ def create_jira_issue(jira, issue_dict, bug, opts=None):
     return new_issue
 
 
-def lp_to_jira_bug(lp, jira, bug, project_id, opts):
+def lp_to_jira_bug(lp, jira, bug, sync, opts):
     """Create JIRA issue at project_id for a given Launchpad bug"""
+
+    project_id = sync["jira_project"]
+    assignee_ids = sync.get("assignees", None)
 
     if is_bug_in_jira(jira, bug, project_id):
         return
 
-    issue_dict = build_jira_issue(lp, bug, project_id, opts)
+    sync_to_jira = False
+
+    if assignee_ids:
+        url_prefix = 'https://api.launchpad.net/devel/~'
+        assignees = [ url_prefix + a for a in assignee_ids ]
+
+        # Sync bugs where any series matches assignees specified
+        for serie in bug.bug_tasks:
+            if str(serie.assignee) in assignees:
+                sync_to_jira = True
+    else:
+        # If no assignees specified, sync everything
+        sync_to_jira = True
+
+    if not sync_to_jira:
+        return
+
+    issue_type = sync.get("issue_type", "Bug")
+    issue_dict = build_jira_issue(lp, bug, project_id, issue_type, opts)
     if opts.label:
         # Add labels if specified
         issue_dict["labels"] = [opts.label]
 
-    jira_issue = create_jira_issue(jira, issue_dict, bug, opts)
+    if opts.dry_run:
+        print("(dry-run) Creating JIRA issue {}".format(issue_dict))
+    else:
+        jira_issue = create_jira_issue(jira, issue_dict, bug, opts)
 
     if opts.lp_link:
-        # Add reference to the JIRA entry in the bugs on Launchpad
-        bug.description += '\n\n---\nExternal link: https://warthogs.atlassian.net/browse/'+str(jira_issue.key)
-        bug.lp_save()
+       if opts.dry_run:
+           print("(dry-run) Adding JIRA issue link to bug description")
+       else:
+           # Add reference to the JIRA entry in the bugs on Launchpad
+           bug.description += '\n\n---\nExternal link: https://warthogs.atlassian.net/browse/'+str(jira_issue.key)
+           bug.lp_save()
 
     if not opts.no_lp_tag:
-        # Add reference to the JIRA entry in the bugs on Launchpad
-        bug.tags += [jira_issue.key.lower()]
-        bug.lp_save()
+        if opts.dry_run:
+            print("(dry-run) Adding JIRA issue ID to bug tags")
+        else:
+            # Add reference to the JIRA entry in the bugs on Launchpad
+            bug.tags += [jira_issue.key.lower()]
+            bug.lp_save()
 
 def main(args=None):
     opt_parser = argparse.ArgumentParser(
@@ -285,6 +316,18 @@ def main(args=None):
         action='store_true',
         help='Do not add tag to LP Bug'
     )
+    opt_parser.add_argument(
+        '--dry-run',
+        dest='dry_run',
+        action='store_true',
+        default=False,
+        help='Dry run, make no changes'
+    )
+    opt_parser.add_argument(
+            '--config-json',
+            dest='config',
+            type=argparse.FileType('r'),
+            help='JSON configuration file')
 
     opts = opt_parser.parse_args(args)
 
@@ -315,19 +358,31 @@ def main(args=None):
 
     jira = JIRA(api.server, basic_auth=(api.login, api.token))
 
-    if opts.sync_project_bugs:
+    opts.sync_config = []
+    if opts.config:
+        opts.sync_config = json.load(opts.config)
+    elif opts.sync_project_bugs:
+        sync_project = {"launchpad_project": opts.sync_project_bugs, "jira_project": opts.project, "assignees": None}
+        opts.sync_config.append(sync_project)
+
+    # Iterate over project list
+    for sync in opts.sync_config:
         tasks_list = get_all_lp_project_bug_tasks(
-            lp, opts.sync_project_bugs, opts.days, opts.tags)
+            lp, sync["launchpad_project"], opts.days, opts.tags)
         if tasks_list is None:
-            return 1
+            continue
 
         for bug_task in tasks_list:
             bug = bug_task.bug
-            lp_to_jira_bug(lp, jira, bug, opts.project, opts)
+            lp_to_jira_bug(lp, jira, bug, sync, opts)
+
+    if len(opts.sync_config) > 0:
+        # Stop here if any project sync was specified
         return 0
 
     bug_number = opts.bug
     project_id = opts.project
+    config = {"jira_project": project_id}
 
     bug = get_lp_bug(lp, bug_number)
     if bug is None:
@@ -342,6 +397,9 @@ def main(args=None):
         return 1
 
     # Create the Jira Issue
-    lp_to_jira_bug(lp, jira, bug, project_id, opts)
+    lp_to_jira_bug(lp, jira, bug, config, opts)
 
     return 0
+
+if __name__ == "__main__":
+    main()
