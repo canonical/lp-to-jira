@@ -1,4 +1,4 @@
-name: lp-to-jira
+name: spark-lp-to-jira
 base: core20
 version: '0.7'
 summary: Command Line Interface to import Launchpad content into JIRA
