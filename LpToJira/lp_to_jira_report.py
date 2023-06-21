@@ -368,13 +368,7 @@ def find_issues_in_project(api, project):
                 'Importance': '',
                 'Packages': '',
                 "Devel": '',
-                "3.12": '',
-                "3.11": '',
-                "3.10": '',
-                "3.9": '',
-                "3.8": '',
-                "3.7": '',
-                "3.6": ''
+                'Milestone': lpbug_milestone''
             }
             found_issues.append(entry)
 
@@ -519,9 +513,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
             issue['Importance'] = lpbug_importance
             issue['Packages'] = pkg
             issue["Devel"] = lpbug_devel
-            issue["Milestone"] = lpbug_milestone
-
-
+            issue['Milestone'] = lpbug_milestone
 
             if sync:
                 jira_key = issue["JIRA ID"]
