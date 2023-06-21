@@ -363,17 +363,11 @@ def find_issues_in_project(api, project):
                 'Summary': summary,
                 'Status': issue.fields.status.name,
                 'LaunchPad ID': lpbug_id,
+                'Milestone': '',           
                 'Heat': '',
                 'Importance': '',
                 'Packages': '',
-                "Devel": '',
-                "Jammy": '',
-                "Impish": '',
-                "Hirsute": '',
-                "Focal": '',
-                "Bionic": '',
-                "Xenial": '',
-                "Trusty": ''
+                "Devel": ''
             }
             found_issues.append(entry)
 
@@ -475,13 +469,8 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
         print("#", flush=True, end='')
         lpbug_importance = ""
         lpbug_devel = ""
-        lpbug_jammy = ""
-        lpbug_impish = ""
-        lpbug_hirsute = ""
-        lpbug_focal = ""
-        lpbug_bionic = ""
-        lpbug_xenial = ""
-        lpbug_trusty = ""
+        lpbug_milestone = ""
+
 
         try:
             lpbug = lp_bug(issue['LaunchPad ID'], lp)
@@ -523,13 +512,8 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
             issue['Importance'] = lpbug_importance
             issue['Packages'] = pkg
             issue["Devel"] = lpbug_devel
-            issue["Jammy"] = lpbug_jammy
-            issue["Impish"] = lpbug_impish
-            issue["Hirsute"] = lpbug_hirsute
-            issue["Focal"] = lpbug_focal
-            issue["Bionic"] = lpbug_bionic
-            issue["Xenial"] = lpbug_xenial
-            issue["Trusty"] = lpbug_trusty
+            issue["Milestone"] = lpbug_milestone
+
 
 
             if sync:
