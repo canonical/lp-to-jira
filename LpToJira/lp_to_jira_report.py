@@ -368,7 +368,7 @@ def find_issues_in_project(api, project):
                 'Importance': '',
                 'Packages': '',
                 "Devel": '',
-                'Milestone': lpbug_milestone''
+                'Milestone': lpbug_milestone,
             }
             found_issues.append(entry)
 
