@@ -367,7 +367,14 @@ def find_issues_in_project(api, project):
                 'Heat': '',
                 'Importance': '',
                 'Packages': '',
-                "Devel": ''
+                "Devel": '',
+                "3.12": '',
+                "3.11": '',
+                "3.10": '',
+                "3.9": '',
+                "3.8": '',
+                "3.7": '',
+                "3.6": ''
             }
             found_issues.append(entry)
 
