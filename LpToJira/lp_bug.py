@@ -34,6 +34,7 @@ class lp_bug():
         self.title = bug.title
         self.description = bug.description
         self.heat = bug.heat
+        self.milestone = bug.milestone
 
         self.packages_info = {}
         for task in bug.bug_tasks:
@@ -104,6 +105,7 @@ class lp_bug():
     def __str__(self):
         string = "LP: #{} : {}".format(self.id, self.title)
         string += "\nHeat: {}".format(self.heat)
+        string += "\nMilestone: {}".format(self.milestone)
         for pkg in self.affected_packages:
             string += "\n - {}:".format(pkg)
             for serie in self.affected_series(pkg):
