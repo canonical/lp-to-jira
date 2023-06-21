@@ -367,13 +367,7 @@ def find_issues_in_project(api, project):
                 'Importance': '',
                 'Packages': '',
                 "Devel": '',
-                "Jammy": '',
-                "Impish": '',
-                "Hirsute": '',
-                "Focal": '',
-                "Bionic": '',
-                "Xenial": '',
-                "Trusty": ''
+                'Milestone': lpbug_milestone''
             }
             found_issues.append(entry)
 
@@ -475,6 +469,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
         print("#", flush=True, end='')
         lpbug_importance = ""
         lpbug_devel = ""
+        lpbug_milestone = ""
         lpbug_jammy = ""
         lpbug_impish = ""
         lpbug_hirsute = ""
@@ -523,6 +518,7 @@ def merge_lp_data_with_jira_issues(jira, lp, issues, sync=False):
             issue['Importance'] = lpbug_importance
             issue['Packages'] = pkg
             issue["Devel"] = lpbug_devel
+            issue['Milestone'] = lpbug_milestone
             issue["Jammy"] = lpbug_jammy
             issue["Impish"] = lpbug_impish
             issue["Hirsute"] = lpbug_hirsute
