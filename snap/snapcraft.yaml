@@ -1,3 +1,4 @@
+title: LaunchPad to Jira Bug Importer
 name: lp-to-jira
 base: core24
 version: '0.8'
